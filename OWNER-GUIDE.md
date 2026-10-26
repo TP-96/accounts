@@ -75,6 +75,9 @@ Without this, notifications still appear inside Hearth (the bell). To also send 
 | **Someone forgot their password** | Anyone in the house: **Settings → Roommates → Reset password** next to their name, then send them the link. It works once and expires after 3 days. |
 | **Someone moves out** | Make sure they're all square first (their balances show "—" on the home page). Then go to **Settings → Roommates → Remove** (or **Move out** for yourself). Their old bills stay in the history. |
 | **A bill was entered wrong** | Open it from **Bills**, then click **Edit** or **Delete**. Everyone on it is told. |
+| **A bill was deleted by mistake** | **Bills**, scroll to **Recently deleted**, then **Restore**. Works for 90 days. |
+| **You want to see where the money goes** | The **Stats** page: spending by month and by category, and who's been paying up front. |
+| **Roommates keep asking where to send money** | Each person adds their e-Transfer email or phone in **Settings → Where roommates should send money**. It then shows up whenever someone pays them back. |
 | **A payment was entered wrong** | **Settle up → Payments so far**, then the bin icon next to it. |
 | **Rent or internet repeats every month** | Choose **Repeats: every month** when adding it. To stop it: **Bills → Repeating bills → Stop**. |
 | **You want a copy of everything** | **Settings → Download Excel file.** Doing this every few months is a nice extra backup. |

@@ -9,7 +9,9 @@ Bill splitting for roommates, a less janky Splitwise: unlimited bills, no ads, n
 - **Accounts:** one account per roommate. Join a house with an invite link. A roommate can make a password-reset link for you, and settled-up roommates can move out.
 - **Bills:**
   - each bill has a name, description, category, date and who paid
-  - split equally, by amount, or by percentage, always exact to the cent
+  - split equally, by amount, by percentage, or by shares (e.g. 2 shares for a couple), always exact to the cent
+  - comments on any bill (everyone on it is notified)
+  - deleted bills can be restored for 90 days
   - bills can repeat weekly or monthly
 - **Receipt scanning:**
   - snap or upload a receipt, and it fills in the amount, name, date, category and items
@@ -23,6 +25,10 @@ Bill splitting for roommates, a less janky Splitwise: unlimited bills, no ads, n
   - balances update instantly
   - "simplify debts" shows the fewest payments that settle the whole house
 - **Balances:** a statement showing what you owe each roommate and what each owes you, with the total underlined.
+- **Stats:**
+  - spending per month (your share versus everyone else's), by category, and who has been paying up front
+  - your monthly average, the biggest bills, and what repeating bills cost
+- **e-Transfer details:** each person can save where they like to be paid, shown to roommates when they pay them back.
 - **Ledger:** every transaction from any roommate's point of view, overall or with one person, with a running balance.
 - **Excel export:** transactions, bill splits, balances, and a ledger sheet per roommate.
 - **Light and dark mode.**
@@ -52,7 +58,8 @@ There's also a command-line receipt scanner: `npm run scan -- receipt.jpg` print
 api/index.js           Vercel entry point (re-exports the Express app)
 server/src/
   app.js               Express app: CORS, auth, routes, export, cron endpoint
-  db.js                Postgres layer (Neon in production, PGlite locally/tests) + schema
+  db.js                Postgres layer (Neon in production, PGlite locally/tests), schema + numbered migrations
+  routes/extras.js     stats, comments, restoring deleted bills
   money.js             split maths in integer cents
   balances.js          pairwise balances, debt simplification, ledger
   bills.js recurring.js export.js notify.js auth.js routes/

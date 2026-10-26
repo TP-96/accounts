@@ -65,6 +65,33 @@ export function splitPercent(totalCents, entries) {
   return raw.map((r) => ({ userId: r.userId, shareCents: r.floor, percent: r.percent }));
 }
 
+/**
+ * Shares: each person gets a number of "shares" (e.g. 2 for a couple, 1 for everyone else).
+ * Largest-remainder rounding so the cents always add up to the total.
+ */
+export function splitShares(totalCents, entries) {
+  if (!entries.length) throw new ValidationError('Pick at least one person for this bill');
+  const units = entries.map((e) => Number(e.shares));
+  if (units.some((u) => !Number.isFinite(u) || u < 0)) throw new ValidationError('Shares must be zero or more');
+  if (units.some((u) => u > 1000)) throw new ValidationError('That is a lot of shares — use a smaller number');
+  const sum = units.reduce((a, b) => a + b, 0);
+  if (sum <= 0) throw new ValidationError('Give at least one person a share');
+  const raw = entries.map((e, i) => {
+    const exact = (totalCents * units[i]) / sum;
+    return { userId: e.userId, units: units[i], floor: Math.floor(exact), frac: exact - Math.floor(exact), i };
+  });
+  let remainder = totalCents - raw.reduce((a, r) => a + r.floor, 0);
+  [...raw]
+    .sort((a, b) => b.frac - a.frac || a.i - b.i)
+    .forEach((r) => {
+      if (remainder > 0) {
+        r.floor += 1;
+        remainder -= 1;
+      }
+    });
+  return raw.map((r) => ({ userId: r.userId, shareCents: r.floor, percent: null, units: r.units }));
+}
+
 export function computeShares(splitType, totalCents, participants) {
   switch (splitType) {
     case 'equal':
@@ -73,6 +100,8 @@ export function computeShares(splitType, totalCents, participants) {
       return splitExact(totalCents, participants);
     case 'percent':
       return splitPercent(totalCents, participants);
+    case 'shares':
+      return splitShares(totalCents, participants);
     default:
       throw new ValidationError('Unknown split type');
   }

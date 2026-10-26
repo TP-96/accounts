@@ -61,16 +61,16 @@ export async function buildWorkbook(householdId, userId) {
     { header: 'Paid by', key: 'payer', width: 14 },
     { header: 'Person', key: 'person', width: 14 },
     { header: 'Share', key: 'share', width: 12, style: { numFmt: MONEY } },
-    { header: 'Percent', key: 'pct', width: 10 },
+    { header: 'Split', key: 'pct', width: 12 },
   ];
   const shares = await q.all(
-    `SELECT b.date, b.title, b.amount_cents, b.paid_by, s.user_id, s.share_cents, s.percent
+    `SELECT b.date, b.title, b.amount_cents, b.paid_by, s.user_id, s.share_cents, s.percent, s.units
        FROM bills b JOIN bill_shares s ON s.bill_id = b.id
       WHERE b.household_id = ? AND b.deleted_at IS NULL ORDER BY b.date, b.id, s.user_id`,
     householdId
   );
   shares.forEach((s) =>
-    wsSplit.addRow({ date: s.date, bill: s.title, total: cents(s.amount_cents), payer: name.get(s.paid_by), person: name.get(s.user_id), share: cents(s.share_cents), pct: s.percent != null ? `${s.percent}%` : '' })
+    wsSplit.addRow({ date: s.date, bill: s.title, total: cents(s.amount_cents), payer: name.get(s.paid_by), person: name.get(s.user_id), share: cents(s.share_cents), pct: s.percent != null ? `${s.percent}%` : s.units != null ? `${s.units} ${s.units === 1 ? 'share' : 'shares'}` : '' })
   );
   styleHeader(wsSplit);
 

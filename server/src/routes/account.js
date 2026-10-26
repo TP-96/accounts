@@ -81,7 +81,9 @@ r.patch('/me', requireUser, async (req, res) => {
   }
   const color = /^#[0-9a-f]{6}$/i.test(req.body.color || '') ? req.body.color : u.color;
   const emailNotifications = req.body.emailNotifications != null ? (req.body.emailNotifications ? 1 : 0) : u.email_notifications;
-  await q.run('UPDATE users SET name=?, color=?, email_notifications=?, password_hash=? WHERE id=?', name, color, emailNotifications, hash, u.id);
+  // Where roommates should send money (Interac e-Transfer email or phone). Shown to housemates only.
+  const etransfer = req.body.etransfer != null ? String(req.body.etransfer).trim().slice(0, 120) : u.etransfer || '';
+  await q.run('UPDATE users SET name=?, color=?, email_notifications=?, password_hash=?, etransfer=? WHERE id=?', name, color, emailNotifications, hash, etransfer, u.id);
   res.json({ user: publicUser(await getUser(u.id)) });
 });
 
@@ -155,7 +157,7 @@ const newCode = () => crypto.randomBytes(4).toString('hex').toUpperCase();
 async function householdPayload(id) {
   if (!id) return null;
   const h = await q.get('SELECT * FROM households WHERE id = ?', id);
-  const members = await q.all('SELECT id, name, email, color FROM users WHERE household_id = ? ORDER BY id', id);
+  const members = await q.all('SELECT id, name, email, color, etransfer FROM users WHERE household_id = ? ORDER BY id', id);
   // People who moved out: kept so old bills and the ledger still show their names.
   const formerMembers = await q.all('SELECT id, name, color FROM users WHERE former_household_id = ? AND household_id IS DISTINCT FROM ? ORDER BY id', id, id);
   return { id: h.id, name: h.name, inviteCode: h.invite_code, currency: h.currency, members, formerMembers };

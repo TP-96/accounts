@@ -17,6 +17,7 @@ async function copyText(text, toast, done) {
 export default function Settings() {
   const { user, household, refresh, toast, bump } = useSession();
   const [name, setName] = useState(user.name);
+  const [etransfer, setEtransfer] = useState(user.etransfer || '');
   const [houseName, setHouseName] = useState(household.name);
   const [pw, setPw] = useState({ currentPassword: '', newPassword: '' });
   const [error, setError] = useState(null);
@@ -185,6 +186,30 @@ export default function Settings() {
               </label>
               <button className="btn" style={{ justifySelf: 'start' }} disabled={!name.trim() || name === user.name}>
                 Save name
+              </button>
+            </form>
+            <form
+              className="form-grid"
+              onSubmit={(e) => {
+                e.preventDefault();
+                save({ etransfer }, etransfer.trim() ? 'Saved. Roommates will see it when they pay you.' : 'Removed');
+              }}
+            >
+              <label className="field">
+                <span>Where roommates should send money</span>
+                <input
+                  className="input"
+                  value={etransfer}
+                  onChange={(e) => setEtransfer(e.target.value)}
+                  maxLength={120}
+                  placeholder="e-Transfer email or phone number"
+                />
+              </label>
+              <p className="faint" style={{ marginTop: -8 }}>
+                Shown to your roommates when they pay you back, so nobody has to ask.
+              </p>
+              <button className="btn" style={{ justifySelf: 'start' }} disabled={etransfer.trim() === (user.etransfer || '')}>
+                Save
               </button>
             </form>
           </section>

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from 'react';
 import { NavLink, Link, Outlet } from 'react-router-dom';
-import { BookOpen, ReceiptText, ArrowLeftRight, Bell, Home, Plus } from 'lucide-react';
+import { BookOpen, ReceiptText, ArrowLeftRight, Bell, Home, Plus, BarChart3 } from 'lucide-react';
 import { useSession } from '../lib/session.jsx';
 import BillForm from './BillForm.jsx';
 import PaymentForm from './PaymentForm.jsx';
@@ -24,6 +24,7 @@ const NAV = [
   ['/bills', 'Bills', ReceiptText],
   ['/settle', 'Settle up', ArrowLeftRight],
   ['/ledger', 'Ledger', BookOpen],
+  ['/stats', 'Stats', BarChart3],
   ['/notifications', 'Alerts', Bell],
 ];
 

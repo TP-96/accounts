@@ -33,7 +33,7 @@ export async function normalizeBill(householdId, input) {
 
 async function insertShares(t, billId, shares) {
   for (const s of shares) {
-    await t.run('INSERT INTO bill_shares (bill_id, user_id, share_cents, percent) VALUES (?, ?, ?, ?)', billId, s.userId, s.shareCents, s.percent);
+    await t.run('INSERT INTO bill_shares (bill_id, user_id, share_cents, percent, units) VALUES (?, ?, ?, ?, ?)', billId, s.userId, s.shareCents, s.percent ?? null, s.units ?? null);
   }
 }
 
@@ -87,7 +87,7 @@ export async function getBill(householdId, billId) {
   const bill = await q.get('SELECT * FROM bills WHERE id = ? AND household_id = ? AND deleted_at IS NULL', billId, householdId);
   if (!bill) return null;
   const shares = await q.all(
-    `SELECT s.user_id, s.share_cents, s.percent, u.name, u.color FROM bill_shares s JOIN users u ON u.id = s.user_id
+    `SELECT s.user_id, s.share_cents, s.percent, s.units, u.name, u.color FROM bill_shares s JOIN users u ON u.id = s.user_id
       WHERE s.bill_id = ? ORDER BY u.id`,
     billId
   );
@@ -103,6 +103,7 @@ export async function getBill(householdId, billId) {
     color: s.color,
     shareCents: s.share_cents,
     percent: s.percent,
+    units: s.units,
     paidCents: s.user_id === bill.paid_by ? s.share_cents : paidMap.get(s.user_id) || 0,
   })));
 }

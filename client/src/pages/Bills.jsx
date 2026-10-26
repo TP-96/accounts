@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Repeat } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { useSession, useData } from '../lib/session.jsx';
-import { money, shortDate, CATEGORY_LABELS } from '../lib/format.js';
+import { money, shortDate, timeAgo, CATEGORY_LABELS } from '../lib/format.js';
 import { useActions } from '../components/Layout.jsx';
 import { CategoryTag, Loading } from '../components/ui.jsx';
 
@@ -16,6 +16,7 @@ export default function Bills() {
   const qs = new URLSearchParams({ search, category, mine: mine ? '1' : '' }).toString();
   const { data } = useData(`/bills?${qs}`);
   const { data: rec } = useData('/recurring');
+  const { data: deleted } = useData('/bills-deleted');
 
   const grouped = useMemo(() => {
     const g = new Map();
@@ -32,6 +33,16 @@ export default function Bills() {
     return new Date(y, m - 1, 1).toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
   };
   const monthTotal = (bills) => bills.reduce((s, b) => s + b.amountCents, 0);
+
+  const restore = async (b) => {
+    try {
+      await api.post(`/bills/${b.id}/restore`);
+      toast(`"${b.title}" is back`);
+      bump();
+    } catch (e) {
+      toast(e.message);
+    }
+  };
 
   const stopRecurring = async (r) => {
     await api.del(`/recurring/${r.id}`);
@@ -148,6 +159,36 @@ export default function Bills() {
           ))
         )}
       </section>
+
+      {deleted?.bills.length > 0 && (
+        <section className="section">
+          <details className="deleted">
+            <summary>
+              Recently deleted ({deleted.bills.length})
+              <span className="faint" style={{ fontWeight: 400, marginLeft: 8 }}>
+                Deleted something by mistake? You can bring it back for 90 days.
+              </span>
+            </summary>
+            <ul className="rows" style={{ marginTop: 10 }}>
+              {deleted.bills.map((b) => (
+                <li key={b.id} className="row">
+                  <span className="row-date">{shortDate(b.date)}</span>
+                  <span className="row-main">
+                    <span className="row-title">{b.title}</span>
+                    <span className="row-meta">Deleted {timeAgo(b.deletedAt)}</span>
+                  </span>
+                  <span className="row-end">
+                    <span className="row-amt">{money(b.amountCents)}</span>
+                    <button className="btn btn-sm" onClick={() => restore(b)}>
+                      Restore
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </section>
+      )}
     </>
   );
 }

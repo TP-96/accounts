@@ -108,8 +108,40 @@ CREATE INDEX IF NOT EXISTS idx_payments_household ON payments(household_id, date
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read_at);
 CREATE INDEX IF NOT EXISTS idx_activity_household ON activity(household_id, id);
 
-ALTER TABLE users ADD COLUMN IF NOT EXISTS former_household_id INTEGER REFERENCES households(id);
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version INTEGER PRIMARY KEY,
+  applied_at TEXT NOT NULL DEFAULT now_iso()
+);
 `;
+
+/*
+ * One-time changes to an existing database, applied in order and recorded in
+ * schema_migrations so each runs exactly once. To change the schema later, add a
+ * new entry at the end; never edit or reorder old ones.
+ */
+const MIGRATIONS = [
+  [1, `ALTER TABLE users ADD COLUMN IF NOT EXISTS former_household_id INTEGER REFERENCES households(id)`],
+  [
+    2,
+    // "Split by shares" (e.g. 2 shares for a couple, 1 for everyone else).
+    `ALTER TABLE bills DROP CONSTRAINT IF EXISTS bills_split_type_check;
+     ALTER TABLE bills ADD CONSTRAINT bills_split_type_check CHECK (split_type IN ('equal','exact','percent','shares'));
+     ALTER TABLE bill_shares ADD COLUMN IF NOT EXISTS units DOUBLE PRECISION`,
+  ],
+  [
+    3,
+    // Comments on bills, and where each person likes to be paid (e-Transfer email/phone).
+    `CREATE TABLE IF NOT EXISTS bill_comments (
+       id SERIAL PRIMARY KEY,
+       bill_id INTEGER NOT NULL REFERENCES bills(id) ON DELETE CASCADE,
+       user_id INTEGER NOT NULL REFERENCES users(id),
+       body TEXT NOT NULL,
+       created_at TEXT NOT NULL DEFAULT now_iso()
+     );
+     CREATE INDEX IF NOT EXISTS idx_bill_comments_bill ON bill_comments(bill_id, id);
+     ALTER TABLE users ADD COLUMN IF NOT EXISTS etransfer TEXT NOT NULL DEFAULT ''`,
+  ],
+];
 
 /** "a = ? AND b = ?" -> "a = $1 AND b = $2" (skips ? inside quoted strings). */
 function toPg(sql) {
@@ -198,12 +230,18 @@ export function init() {
   if (!ready) {
     ready = (async () => {
       driver = await connect();
-      await driver.query(`SELECT pg_advisory_lock(424242)`).catch(() => {});
-      try {
-        for (const stmt of SCHEMA.split(/;\s*\n(?=\s*(?:CREATE|ALTER))/)) await driver.query(stmt);
-      } finally {
-        await driver.query(`SELECT pg_advisory_unlock(424242)`).catch(() => {});
-      }
+      // One transaction on one connection, holding a lock that's released at commit,
+      // so two servers starting at once can't both apply the same change.
+      await driver.transaction(async (run) => {
+        await run('SELECT pg_advisory_xact_lock(424242)', []);
+        for (const stmt of SCHEMA.split(/;\s*\n(?=\s*(?:CREATE|ALTER))/)) await run(stmt, []);
+        const done = new Set((await run('SELECT version FROM schema_migrations', [])).rows.map((r) => r.version));
+        for (const [version, sql] of MIGRATIONS) {
+          if (done.has(version)) continue;
+          for (const stmt of sql.split(/;\s*\n/)) if (stmt.trim()) await run(stmt, []);
+          await run('INSERT INTO schema_migrations (version) VALUES ($1)', [version]);
+        }
+      });
     })();
     ready.catch(() => (ready = null));
   }

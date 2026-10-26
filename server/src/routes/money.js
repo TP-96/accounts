@@ -36,7 +36,7 @@ r.get('/bills', async (req, res) => {
   const byBill = new Map();
   for (const s of shares) {
     if (!byBill.has(s.bill_id)) byBill.set(s.bill_id, []);
-    byBill.get(s.bill_id).push({ userId: s.user_id, shareCents: s.share_cents, percent: s.percent });
+    byBill.get(s.bill_id).push({ userId: s.user_id, shareCents: s.share_cents, percent: s.percent, units: s.units });
   }
   for (const list of byBill.values()) list.sort((a, b) => a.userId - b.userId);
   let bills = rows.map((b) => serializeBill(b, byBill.get(b.id) || []));

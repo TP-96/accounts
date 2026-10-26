@@ -7,7 +7,7 @@ import { money, shortDate, CATEGORY_LABELS, timeAgo } from '../lib/format.js';
 import { useActions } from '../components/Layout.jsx';
 import { Avatar, Loading, Modal } from '../components/ui.jsx';
 
-const SPLIT_LABEL = { equal: 'Split equally', exact: 'Split by amount', percent: 'Split by percent' };
+const SPLIT_LABEL = { equal: 'Split equally', exact: 'Split by amount', percent: 'Split by percent', shares: 'Split by shares' };
 
 export default function BillDetail() {
   const { id } = useParams();
@@ -105,6 +105,7 @@ export default function BillDetail() {
                     <span className="row-meta">
                       Share {money(s.shareCents)}
                       {s.percent != null ? `, ${s.percent}%` : ''}
+                      {s.units != null ? `, ${s.units} ${s.units === 1 ? 'share' : 'shares'}` : ''}
                     </span>
                   </span>
                   <span className="row-end">
@@ -126,6 +127,8 @@ export default function BillDetail() {
               );
             })}
           </ul>
+
+          <Comments billId={b.id} />
         </section>
         <aside className="aside">
           <h3 style={{ marginBottom: 8 }}>About this bill</h3>
@@ -161,5 +164,77 @@ export default function BillDetail() {
         </Modal>
       )}
     </>
+  );
+}
+
+/** Comments thread: everyone on the bill is notified of new comments. */
+function Comments({ billId }) {
+  const { user, toast, bump } = useSession();
+  const { data } = useData(`/bills/${billId}/comments`);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function post(e) {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setBusy(true);
+    try {
+      await api.post(`/bills/${billId}/comments`, { body: text });
+      setText('');
+      bump();
+    } catch (err) {
+      toast(err.message);
+    }
+    setBusy(false);
+  }
+
+  async function remove(c) {
+    await api.del(`/comments/${c.id}`);
+    toast('Comment deleted');
+    bump();
+  }
+
+  return (
+    <div style={{ marginTop: 30 }}>
+      <div className="month-label">Comments</div>
+      {data?.comments.length ? (
+        <ul className="comments">
+          {data.comments.map((c) => (
+            <li key={c.id}>
+              <Avatar user={c.user} size="sm" />
+              <div className="comment-main">
+                <div className="comment-meta">
+                  <strong>{c.user.id === user.id ? 'You' : c.user.name}</strong> {timeAgo(c.createdAt)}
+                  {c.user.id === user.id && (
+                    <button className="btn-link comment-del" onClick={() => remove(c)}>
+                      Delete
+                    </button>
+                  )}
+                </div>
+                <p>{c.body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="faint" style={{ padding: '12px 0' }}>
+          No comments yet. Ask a question or leave a note; everyone on this bill gets notified.
+        </p>
+      )}
+      <form className="comment-form" onSubmit={post}>
+        <textarea
+          className="textarea"
+          rows={2}
+          placeholder="Write a comment"
+          value={text}
+          maxLength={1000}
+          onChange={(e) => setText(e.target.value)}
+          aria-label="Write a comment"
+        />
+        <button className="btn" disabled={busy || !text.trim()}>
+          Post comment
+        </button>
+      </form>
+    </div>
   );
 }

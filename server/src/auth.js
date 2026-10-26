@@ -78,6 +78,7 @@ export function publicUser(u) {
     color: u.color,
     householdId: u.household_id,
     emailNotifications: !!u.email_notifications,
+    etransfer: u.etransfer || '',
   };
 }
 

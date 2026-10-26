@@ -12,7 +12,7 @@ if (!process.env.DATABASE_URL) process.env.DB_MEMORY = '1'; // fresh in-memory P
 const { default: app } = await import('../src/app.js');
 const { init, close, q } = await import('../src/db.js');
 const { runRecurring } = await import('../src/recurring.js');
-const { splitEqual, splitPercent, splitExact } = await import('../src/money.js');
+const { splitEqual, splitPercent, splitExact, splitShares } = await import('../src/money.js');
 const { advanceDate } = await import('../src/recurring.js');
 const ExcelJS = (await import('exceljs')).default;
 
@@ -43,7 +43,7 @@ function client() {
     const data = ct.includes('json') ? await res.json() : Buffer.from(await res.arrayBuffer());
     return { status: res.status, data };
   };
-  return { get: (u) => call('GET', u), post: (u, b) => call('POST', u, b || {}), put: (u, b) => call('PUT', u, b), del: (u) => call('DELETE', u) };
+  return { get: (u) => call('GET', u), post: (u, b) => call('POST', u, b || {}), put: (u, b) => call('PUT', u, b), patch: (u, b) => call('PATCH', u, b), del: (u) => call('DELETE', u) };
 }
 
 test('split math always sums to the total', () => {
@@ -258,4 +258,62 @@ test('owner tools: roommate-made reset link, and moving out', async () => {
   // Ben can now join a different house.
   assert.equal((await b.get('/me')).data.household, null);
   assert.equal((await b.post('/household', { name: 'New place' })).status, 201);
+});
+
+test('split by shares adds up to the cent', () => {
+  const r = splitShares(10000, [{ userId: 1, shares: 2 }, { userId: 2, shares: 1 }, { userId: 3, shares: 1 }]);
+  assert.deepEqual(r.map((x) => x.shareCents), [5000, 2500, 2500]);
+  const odd = splitShares(1000, [{ userId: 1, shares: 1 }, { userId: 2, shares: 1 }, { userId: 3, shares: 1 }]);
+  assert.equal(odd.reduce((a, x) => a + x.shareCents, 0), 1000);
+  assert.throws(() => splitShares(100, [{ userId: 1, shares: 0 }]), /at least one person a share/);
+});
+
+test('new features: shares bills, comments, restore, e-Transfer, stats', async () => {
+  const a = client(), b = client();
+  const A = (await a.post('/auth/register', { name: 'Ivy', email: 'ivy@x.com', password: 'password1' })).data.user;
+  const h = (await a.post('/household', { name: 'Oak' })).data.household;
+  const B = (await b.post('/auth/register', { name: 'Kai', email: 'kai@x.com', password: 'password1', inviteCode: h.inviteCode })).data.user;
+  const thisMonth = new Date().toISOString().slice(0, 7);
+
+  // Shares: Ivy 2 shares, Kai 1 share of $90.
+  const rent = await a.post('/bills', { title: 'Big room rent', amount: 90, paidBy: A.id, splitType: 'shares', category: 'rent',
+    participants: [{ userId: A.id, shares: 2 }, { userId: B.id, shares: 1 }], date: `${thisMonth}-01` });
+  assert.equal(rent.status, 201);
+  assert.deepEqual(rent.data.bill.shares.map((s) => [s.shareCents, s.units]), [[6000, 2], [3000, 1]]);
+  assert.equal((await b.get('/balances')).data.me.iOweCents, 3000);
+  await a.post('/bills', { title: 'Snacks', amount: 20, paidBy: B.id, category: 'groceries', participants: [{ userId: A.id }, { userId: B.id }], date: `${thisMonth}-02` });
+
+  // Comments notify the other person.
+  assert.equal((await b.post(`/bills/${rent.data.bill.id}/comments`, { body: 'Thanks for covering it!' })).status, 201);
+  assert.equal((await b.post(`/bills/${rent.data.bill.id}/comments`, { body: '  ' })).status, 400);
+  const comments = (await a.get(`/bills/${rent.data.bill.id}/comments`)).data.comments;
+  assert.equal(comments[0].user.name, 'Kai');
+  assert.match((await a.get('/notifications')).data.notifications[0].title, /Kai commented on "Big room rent"/);
+  assert.equal((await a.del(`/comments/${comments[0].id}`)).status, 403, "can't delete someone else's comment");
+
+  // Delete then restore.
+  await a.del(`/bills/${rent.data.bill.id}`);
+  assert.equal((await b.get('/balances')).data.me.iOweCents, 0);
+  const deleted = (await a.get('/bills-deleted')).data.bills;
+  assert.equal(deleted[0].title, 'Big room rent');
+  assert.equal((await a.post(`/bills/${rent.data.bill.id}/restore`)).status, 200);
+  assert.equal((await b.get('/balances')).data.me.iOweCents, 3000 - 1000);
+  assert.equal((await a.get('/bills-deleted')).data.bills.length, 0);
+  assert.equal((await a.post(`/bills/${rent.data.bill.id}/restore`)).status, 404);
+
+  // e-Transfer details are visible to housemates.
+  await a.patch('/me', { etransfer: 'ivy.pays@x.com' });
+  const members = (await b.get('/me')).data.household.members;
+  assert.equal(members.find((m) => m.id === A.id).etransfer, 'ivy.pays@x.com');
+
+  // Stats for this month.
+  const st = (await a.get('/stats?range=3')).data;
+  assert.equal(st.months.length, 3);
+  assert.deepEqual(st.months.at(-1), { month: thisMonth, houseCents: 11000, myShareCents: 7000, iPaidCents: 9000 });
+  assert.deepEqual(st.byCategory.map((c) => [c.category, c.totalCents, c.myShareCents]), [['rent', 9000, 6000], ['groceries', 2000, 1000]]);
+  const ivy = st.byPerson.find((p) => p.user.name === 'Ivy');
+  assert.deepEqual([ivy.paidCents, ivy.shareCents], [9000, 7000]);
+  assert.equal(st.biggest[0].title, 'Big room rent');
+  assert.equal(st.summary.houseCents, 11000);
+  assert.equal((await a.get('/stats?range=all')).data.months.length, 1);
 });

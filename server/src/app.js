@@ -8,6 +8,7 @@ import { q, init } from './db.js';
 import { loadUser, requireUser, requireHousehold, downloadToken } from './auth.js';
 import accountRoutes from './routes/account.js';
 import moneyRoutes from './routes/money.js';
+import extraRoutes from './routes/extras.js';
 import { runRecurring } from './recurring.js';
 import { buildWorkbook } from './export.js';
 
@@ -110,6 +111,7 @@ api.get('/export.xlsx', requireHousehold, async (req, res) => {
   res.send(Buffer.from(buffer));
 });
 
+api.use(extraRoutes); // before moneyRoutes so /bills-deleted etc. aren't read as a bill id
 api.use(moneyRoutes);
 api.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 app.use('/api', api);

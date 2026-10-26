@@ -7,8 +7,9 @@ import ReceiptScanner from './ReceiptScanner.jsx';
 
 const SPLITS = [
   ['equal', 'Equally'],
-  ['exact', 'By amount'],
-  ['percent', 'By percent'],
+  ['exact', 'Amounts'],
+  ['percent', 'Percent'],
+  ['shares', 'Shares'],
 ];
 
 /** Mirror of the server's split maths so people see exactly what each person will owe. */
@@ -35,6 +36,25 @@ function preview(splitType, totalCents, rows) {
     const left = totalCents - sum;
     if (left === 0) return { shares, ok: true, msg: 'Adds up to the total' };
     return { shares, ok: false, msg: left > 0 ? `${money(left)} left to assign` : `${money(-left)} over the total` };
+  }
+  if (splitType === 'shares') {
+    // Mirrors the server's largest-remainder split so the preview matches to the cent.
+    const units = on.map((r) => Math.max(0, Number(r.value) || 0));
+    const sum = units.reduce((a, b) => a + b, 0);
+    if (sum <= 0) return { shares: {}, ok: false, msg: 'Give at least one person a share' };
+    const raw = on.map((r, i) => {
+      const exact = (totalCents * units[i]) / sum;
+      return { id: r.userId, c: Math.floor(exact), f: exact - Math.floor(exact), i };
+    });
+    let rem = totalCents - raw.reduce((a, x) => a + x.c, 0);
+    [...raw].sort((a, b) => b.f - a.f || a.i - b.i).forEach((x) => {
+      if (rem > 0) {
+        x.c += 1;
+        rem -= 1;
+      }
+    });
+    const shares = Object.fromEntries(raw.map((x) => [x.id, x.c]));
+    return { shares, ok: true, msg: `${sum} ${sum === 1 ? 'share' : 'shares'} in total, ${money(Math.round(totalCents / sum))} per share` };
   }
   let pctSum = 0;
   const shares = {};
@@ -67,7 +87,7 @@ export default function BillForm({ bill, onClose, onSaved }) {
       return {
         userId: m.id,
         on: bill ? !!s : true,
-        value: s ? (bill.splitType === 'percent' ? String(s.percent ?? '') : (s.shareCents / 100).toFixed(2)) : '',
+        value: s ? (bill.splitType === 'percent' ? String(s.percent ?? '') : bill.splitType === 'shares' ? String(s.units ?? 1) : (s.shareCents / 100).toFixed(2)) : '',
       };
     })
   );
@@ -130,6 +150,8 @@ export default function BillForm({ bill, onClose, onSaved }) {
     } else if (t === 'exact') {
       const p = preview('equal', totalCents, rows).shares;
       setRows(rows.map((r) => (r.on ? { ...r, value: p[r.userId] != null ? (p[r.userId] / 100).toFixed(2) : '' } : r)));
+    } else if (t === 'shares') {
+      setRows(rows.map((r) => (r.on ? { ...r, value: '1' } : r)));
     }
   };
 
@@ -152,7 +174,7 @@ export default function BillForm({ bill, onClose, onSaved }) {
       participants: rows
         .filter((r) => r.on)
         .map((r) =>
-          splitType === 'exact' ? { userId: r.userId, amount: r.value || '0' } : splitType === 'percent' ? { userId: r.userId, percent: Number(r.value) || 0 } : { userId: r.userId }
+          splitType === 'exact' ? { userId: r.userId, amount: r.value || '0' } : splitType === 'percent' ? { userId: r.userId, percent: Number(r.value) || 0 } : splitType === 'shares' ? { userId: r.userId, shares: Number(r.value) || 0 } : { userId: r.userId }
         ),
     };
     try {
@@ -255,6 +277,17 @@ export default function BillForm({ bill, onClose, onSaved }) {
                   {r.on && splitType === 'percent' && (
                     <div className="pct-input share-input">
                       <input className="input num" inputMode="decimal" placeholder="0" value={r.value} onChange={(e) => setRow(m.id, { value: e.target.value })} aria-label={`${m.name}'s percent`} />
+                    </div>
+                  )}
+                  {r.on && splitType === 'shares' && (
+                    <div className="share-input units-input">
+                      <button type="button" className="btn btn-sm icon-btn" aria-label={`One fewer share for ${m.name}`} onClick={() => setRow(m.id, { value: String(Math.max(0, (Number(r.value) || 0) - 1)) })}>
+                        −
+                      </button>
+                      <input className="input" inputMode="decimal" value={r.value} onChange={(e) => setRow(m.id, { value: e.target.value })} aria-label={`${m.name}'s shares`} />
+                      <button type="button" className="btn btn-sm icon-btn" aria-label={`One more share for ${m.name}`} onClick={() => setRow(m.id, { value: String((Number(r.value) || 0) + 1) })}>
+                        +
+                      </button>
                     </div>
                   )}
                   {r.on && splitType !== 'exact' && <span className="share-calc">{share != null ? money(share) : '—'}</span>}

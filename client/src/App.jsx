@@ -11,6 +11,7 @@ import Ledger from './pages/Ledger.jsx';
 import Notifications from './pages/Notifications.jsx';
 import Settings from './pages/Settings.jsx';
 import Reset from './pages/Reset.jsx';
+import Stats from './pages/Stats.jsx';
 import { Loading } from './components/ui.jsx';
 
 function Gate() {
@@ -28,6 +29,7 @@ function Gate() {
         <Route path="bills/:id" element={<BillDetail />} />
         <Route path="settle" element={<Settle />} />
         <Route path="ledger" element={<Ledger />} />
+        <Route path="stats" element={<Stats />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />

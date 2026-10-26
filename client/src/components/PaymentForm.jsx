@@ -53,6 +53,33 @@ export default function PaymentForm({ initial = {}, onClose }) {
     >
       <form id="pay-form" className="form-grid" onSubmit={submit} noValidate>
         <p className="muted">Log money that's already changed hands — e-Transfer, cash, whatever. Balances update right away.</p>
+        {fromUser === user.id && toUser !== user.id && (() => {
+          const to = members.find((m) => m.id === toUser);
+          if (!to) return null;
+          return to.etransfer ? (
+            <div className="note pay-to">
+              <span>
+                Send {to.name} an e-Transfer at <strong>{to.etransfer}</strong>
+              </span>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(to.etransfer);
+                    toast('Copied');
+                  } catch {
+                    toast(to.etransfer);
+                  }
+                }}
+              >
+                Copy
+              </button>
+            </div>
+          ) : (
+            <p className="faint">{to.name} hasn't added their e-Transfer details yet (Settings, "Where roommates should send money").</p>
+          );
+        })()}
         <div className="row-2">
           <label className="field">
             <span>Who paid</span>
