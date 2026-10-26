@@ -1,0 +1,10 @@
+node_modules/
+client/dist/
+client/public/ocr/
+server/data/
+.env
+.env.*
+!.env.example
+!.env.mobile.example
+.vercel
+.DS_Store

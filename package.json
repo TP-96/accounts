@@ -1,0 +1,18 @@
+{
+  "name": "hearth",
+  "private": true,
+  "type": "module",
+  "description": "Bill splitting for roommates — a less janky Splitwise. Web, iOS and Android.",
+  "scripts": {
+    "setup": "npm --prefix server install && npm --prefix client install",
+    "build": "npm --prefix client run build",
+    "start": "NODE_ENV=production npm --prefix server start",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "seed": "node server/scripts/seed.js",
+    "test": "npm --prefix server test && npm --prefix client test",
+    "build:mobile": "npm --prefix client run build:mobile",
+    "scan": "npm --prefix client run scan --"
+  },
+  "engines": { "node": "22.x" }
+}

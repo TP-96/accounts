@@ -1,0 +1,14 @@
+{
+  "appId": "io.github.tp96.hearth",
+  "appName": "Hearth",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "never"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hearth</string>
+    <string name="title_activity_main">Hearth</string>
+    <string name="package_name">io.github.tp96.hearth</string>
+    <string name="custom_url_scheme">io.github.tp96.hearth</string>
+</resources>
