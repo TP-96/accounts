@@ -9,6 +9,16 @@ This guide is for whoever looks after Hearth for the house. You don't need to kn
 
 Most months you won't need to do anything at all.
 
+### Your Hearth
+| | |
+|---|---|
+| **The website** (share this with roommates) | https://accounts-7hb6.vercel.app |
+| **Control panel** (Vercel project) | https://vercel.com/tp-96/accounts-7hb6 |
+| **Code** (GitHub) | https://github.com/TP-96/accounts |
+| **Database** | `hearth-db`, under the **Storage** tab in Vercel |
+
+Setup is already done (October 2026), so you can skip section 1 unless you ever need to set it up again from scratch. When connecting the database, the prefix must be `DATABASE`, so that Vercel creates a setting called `DATABASE_URL`.
+
 ---
 
 ## 1. One-time setup (about 15 minutes)
