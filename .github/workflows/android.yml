@@ -1,10 +1,8 @@
-# Builds an installable Android test app (debug APK) on every push to main.
-# Download it from the run's "Artifacts" section and open it on an Android phone.
+# Builds an installable Android test app (debug APK) when you start it from the Actions tab
+# (Actions → Android test build → Run workflow). Download it from the run's "Artifacts" section.
 # Needs a repository variable HEARTH_API_URL = your Vercel URL (Settings → Secrets and variables → Actions → Variables).
 name: Android test build
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
