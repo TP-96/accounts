@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Download, LogOut, KeyRound, UserMinus } from 'lucide-react';
+import { Copy, Download, LogOut, UserMinus } from 'lucide-react';
 import { api, downloadExport } from '../lib/api.js';
 import { PUBLIC_URL } from '../lib/platform.js';
 import { useSession } from '../lib/session.jsx';
@@ -21,7 +21,6 @@ export default function Settings() {
   const [houseName, setHouseName] = useState(household.name);
   const [pw, setPw] = useState({ currentPassword: '', newPassword: '' });
   const [error, setError] = useState(null);
-  const [resetFor, setResetFor] = useState(null); // {member, link}
   const [removing, setRemoving] = useState(null); // member
   const [removeError, setRemoveError] = useState(null);
 
@@ -36,15 +35,6 @@ export default function Settings() {
     } catch (e) {
       setError(e);
       return false;
-    }
-  };
-
-  const makeResetLink = async (m) => {
-    try {
-      const r = await api.post(`/household/members/${m.id}/reset-link`);
-      setResetFor({ member: m, link: `${PUBLIC_URL}${r.path}` });
-    } catch (e) {
-      toast(e.message);
     }
   };
 
@@ -88,11 +78,6 @@ export default function Settings() {
                     <span className="row-meta">{m.email}</span>
                   </span>
                   <span className="row-end">
-                    {m.id !== user.id && (
-                      <button className="btn btn-sm btn-ghost" onClick={() => makeResetLink(m)} title={`Make a password reset link for ${m.name}`}>
-                        <KeyRound size={15} /> <span className="hide-xs">Reset password</span>
-                      </button>
-                    )}
                     <button className="btn btn-sm btn-ghost" onClick={() => { setRemoveError(null); setRemoving(m); }} title={m.id === user.id ? 'Move out' : `Remove ${m.name}`}>
                       <UserMinus size={15} /> <span className="hide-xs">{m.id === user.id ? 'Move out' : 'Remove'}</span>
                     </button>
@@ -278,30 +263,6 @@ export default function Settings() {
           </section>
         </aside>
       </div>
-
-      {resetFor && (
-        <Modal
-          title={`Reset link for ${resetFor.member.name}`}
-          onClose={() => setResetFor(null)}
-          footer={
-            <button className="btn btn-primary" onClick={() => copyText(resetFor.link, toast, 'Reset link copied')}>
-              <Copy size={16} /> Copy link
-            </button>
-          }
-        >
-          <div className="form-grid">
-            <p>
-              Send this to {resetFor.member.name} by text or chat. Opening it lets them choose a new password. It works once and expires in 3 days.
-            </p>
-            <div className="code-box">
-              <span className="link-text" style={{ flexBasis: 'auto' }}>
-                {resetFor.link}
-              </span>
-            </div>
-            <p className="faint">Only share it with {resetFor.member.name}: anyone with the link can set their password.</p>
-          </div>
-        </Modal>
-      )}
 
       {removing && (
         <Modal

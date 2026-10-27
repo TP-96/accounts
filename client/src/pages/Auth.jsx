@@ -280,7 +280,7 @@ export default function Auth() {
               </p>
               {!emailEnabled && mode === 'login' && (
                 <p className="faint" style={{ marginTop: 14 }}>
-                  Forgot your password? Ask a roommate to make you a reset link in Settings.
+                  Forgot your password? Passwords can only be reset by email, and email isn't set up on this Hearth yet. Ask whoever looks after it.
                 </p>
               )}
             </>

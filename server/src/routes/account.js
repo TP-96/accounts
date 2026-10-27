@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { q } from '../db.js';
-import { setSession, clearSession, publicUser, requireUser, requireHousehold, resetToken, verifyResetToken, resetTokenUserId } from '../auth.js';
+import { setSession, clearSession, publicUser, requireUser, requireHousehold } from '../auth.js';
 import { balancesFor } from '../balances.js';
 import { notify, logActivity, emailEnabled } from '../notify.js';
 
@@ -88,40 +88,6 @@ r.patch('/me', requireUser, async (req, res) => {
   const etransfer = req.body.etransfer != null ? String(req.body.etransfer).trim().slice(0, 120) : u.etransfer || '';
   await q.run('UPDATE users SET name=?, color=?, email_notifications=?, password_hash=?, etransfer=? WHERE id=?', name, color, emailNotifications, hash, etransfer, u.id);
   res.json({ user: publicUser(await getUser(u.id)) });
-});
-
-/* ---------- Password reset without email: a roommate makes a one-time link ---------- */
-
-r.post('/household/members/:id/reset-link', requireHousehold, async (req, res) => {
-  const target = await q.get('SELECT * FROM users WHERE id = ? AND household_id = ?', Number(req.params.id), req.user.household_id);
-  if (!target) return res.status(404).json({ error: 'That person is not in your house' });
-  if (target.id === req.user.id) return res.status(400).json({ error: 'Change your own password in Settings instead' });
-  await notify([target.id], {
-    type: 'account',
-    title: `${req.user.name} made a password reset link for you`,
-    body: "If you didn't ask for this, you can ignore it. The link stops working once your password changes.",
-    link: '/settings',
-  });
-  res.json({ path: `/reset?token=${encodeURIComponent(resetToken(target))}`, name: target.name, expiresInDays: 3 });
-});
-
-r.get('/auth/reset-info', async (req, res) => {
-  const token = String(req.query.token || '');
-  const user = await q.get('SELECT * FROM users WHERE id = ?', resetTokenUserId(token) || 0);
-  if (!verifyResetToken(token, user)) return res.status(400).json({ error: 'This reset link has expired or was already used. Ask a roommate for a new one.' });
-  res.json({ name: user.name, email: user.email });
-});
-
-r.post('/auth/reset', async (req, res) => {
-  const token = String(req.body.token || '');
-  const password = String(req.body.password || '');
-  if (limited(`reset:${req.ip}`)) return res.status(429).json({ error: 'Too many attempts — try again in a few minutes' });
-  const user = await q.get('SELECT * FROM users WHERE id = ?', resetTokenUserId(token) || 0);
-  if (!verifyResetToken(token, user)) return res.status(400).json({ error: 'This reset link has expired or was already used. Ask a roommate for a new one.' });
-  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
-  await q.run('UPDATE users SET password_hash = ? WHERE id = ?', await bcrypt.hash(password, 10), user.id);
-  const sessionTok = setSession(res, user.id);
-  res.json({ user: publicUser(user), token: sessionTok });
 });
 
 /* ---------- Moving out: leave, or remove someone who has left (only when settled up) ---------- */

@@ -10,7 +10,8 @@ Bill splitting for roommates, a less janky Splitwise: unlimited bills, no ads, n
   - one account per roommate, and you join a house with an invite link
   - sign in and sign up with a 6-digit code emailed to you (no password needed), so every address is verified
   - a password is optional and secondary; forgotten passwords are reset by an emailed code
-  - without email set up it falls back to email and password, and a roommate can make a one-time reset link
+  - without email set up it falls back to email and password
+  - nobody can reset another person's password
   - settled-up roommates can move out
 - **Bills:**
   - each bill has a name, description, category, date and who paid

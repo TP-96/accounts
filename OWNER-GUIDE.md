@@ -76,7 +76,7 @@ Once email is set up, everyone signs in and creates accounts with a **6-digit co
 | Situation | What to do |
 |---|---|
 | **A new roommate moves in** | **Settings → Copy invite link**, then send it to them. |
-| **Someone forgot their password** | They don't need a password at all: **Sign in → Email me a code**. To choose a new one, use **Use a password instead → Forgot password?**, which emails a code. If email isn't working, a roommate can make a one-time link under **Settings → Roommates → Reset password**. It works once and expires after 3 days. |
+| **Someone forgot their password** | They don't need a password at all: **Sign in → Email me a code**. To choose a new one, use **Use a password instead → Forgot password?**, which emails a code. Nobody can reset another person's password, not even the owner. Everything goes through the email on that account. |
 | **Someone moves out** | Make sure they're all square first (their balances show "—" on the home page). Then go to **Settings → Roommates → Remove** (or **Move out** for yourself). Their old bills stay in the history. |
 | **A bill was entered wrong** | Open it from **Bills**, then click **Edit** or **Delete**. Everyone on it is told. |
 | **A bill was deleted by mistake** | **Bills**, scroll to **Recently deleted**, then **Restore**. Works for 90 days. |
@@ -106,8 +106,8 @@ It then opens full-screen like a normal app, with no app store needed.
 | *"Can't reach Hearth"* (in the app) | The phone has no internet, or Vercel is down. Check **vercel-status.com**. |
 | The site is blank or broken after a change | Roll back (see Rule one), then ask whoever made the change to fix it. |
 | Repeating bills didn't appear | They're created each morning, and also whenever someone opens the home page. Give it a day. If it still hasn't happened, check the bill under **Bills → Repeating bills**: if it's missing, it was paused because someone on it moved out, so add it again. |
-| Emails (and sign-in codes) stopped arriving | The Gmail app password was probably revoked. Make a new one and update `SMTP_PASS` in Vercel, then redeploy. Until then, anyone who added a password in **Settings** can sign in with it (**Use a password instead**), and a roommate can make a reset link for anyone else. |
-| Everyone in the house is locked out | Rare. Ask the person (or Claude) who maintains the code to make a reset link from the database. |
+| Emails (and sign-in codes) stopped arriving | The Gmail app password was probably revoked. Make a new one and update `SMTP_PASS` in Vercel, then redeploy. Until then, anyone who added a password in **Settings** can sign in with it (**Use a password instead**). |
+| Everyone in the house is locked out | Rare. Fix the email settings (see the row above). Passwords can't be reset by anyone else, so the sign-in emails are the way back in. |
 
 **Getting help:** in Vercel, the **Logs** tab shows recent errors. Copying the red lines into a message to Claude is usually enough to get a fix.
 
@@ -132,5 +132,5 @@ Ask Claude for the change, for example "add a category for pets". The code gets 
 
 ## 6. Please don't…
 - **Delete the Neon database or the Vercel Storage connection.** That deletes the house's records.
-- **Share reset links or sign-in codes with anyone.** A code is the key to that person's account.
+- **Share sign-in codes with anyone.** A code is the key to that person's account.
 - **Rename or delete the GitHub repository** without reconnecting it in Vercel afterwards.

@@ -10,7 +10,6 @@ import Settle from './pages/Settle.jsx';
 import Ledger from './pages/Ledger.jsx';
 import Notifications from './pages/Notifications.jsx';
 import Settings from './pages/Settings.jsx';
-import Reset from './pages/Reset.jsx';
 import Stats from './pages/Stats.jsx';
 import { Loading } from './components/ui.jsx';
 
@@ -18,7 +17,6 @@ function Gate() {
   const { loading, user, household } = useSession();
   const { pathname } = useLocation();
   if (loading) return <Loading />;
-  if (pathname === '/reset') return <Reset />;
   if (!user) return <Auth />;
   if (!household) return <Onboard />;
   return (

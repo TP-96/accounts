@@ -220,24 +220,16 @@ test('recurring bills: catch up, and concurrent runs never duplicate', async () 
   assert.equal(rec.next_date, '2026-11-15');
 });
 
-test('owner tools: roommate-made reset link, and moving out', async () => {
+test('moving out; and nobody can reset another roommate\'s password', async () => {
   const a = client(), b = client();
   const A = (await a.post('/auth/register', { name: 'Ana', email: 'ana@x.com', password: 'password1' })).data.user;
   const h = (await a.post('/household', { name: 'Elm' })).data.household;
   const B = (await b.post('/auth/register', { name: 'Ben', email: 'ben@x.com', password: 'password1', inviteCode: h.inviteCode })).data.user;
 
-  // Ben forgot his password; Ana makes him a link.
-  const link = await a.post(`/household/members/${B.id}/reset-link`);
-  assert.equal(link.status, 200);
-  const token = decodeURIComponent(link.data.path.split('token=')[1]);
-  assert.equal((await client().get(`/auth/reset-info?token=${encodeURIComponent(token)}`)).data.name, 'Ben');
-  const fresh = client();
-  assert.equal((await fresh.post('/auth/reset', { token, password: 'short' })).status, 400);
-  assert.equal((await fresh.post('/auth/reset', { token, password: 'newpassword2' })).status, 200);
-  assert.equal((await fresh.get('/me')).data.user.name, 'Ben', 'reset signs you in');
-  assert.equal((await client().post('/auth/reset', { token, password: 'another123' })).status, 400, 'link is single-use');
-  assert.equal((await client().post('/auth/login', { email: 'ben@x.com', password: 'newpassword2' })).status, 200);
-  assert.equal((await a.post(`/household/members/${A.id}/reset-link`)).status, 400, 'not for yourself');
+  // Roommates cannot reset each other's passwords: the old reset-link routes are gone.
+  assert.equal((await a.post(`/household/members/${B.id}/reset-link`)).status, 404);
+  assert.notEqual((await client().post('/auth/reset', { token: 'x', password: 'newpassword2' })).status, 200);
+  assert.equal((await client().post('/auth/login', { email: 'ben@x.com', password: 'password1' })).status, 200, "Ben's password is untouched");
 
   // Ben owes Ana, so he can't be removed yet.
   await a.post('/bills', { title: 'Hydro', amount: 100, paidBy: A.id, splitType: 'equal', participants: [{ userId: A.id }, { userId: B.id }] });

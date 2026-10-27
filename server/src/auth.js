@@ -43,29 +43,6 @@ export function clearSession(res) {
   res.clearCookie(COOKIE);
 }
 
-/**
- * One-time password reset link token, made by a roommate. It embeds a fingerprint of
- * the current password hash, so it stops working the moment the password changes.
- */
-const fingerprint = (hash) => crypto.createHash('sha256').update(hash || '').digest('hex').slice(0, 16);
-export const resetToken = (user) => jwt.sign({ uid: user.id, purpose: 'reset', fp: fingerprint(user.password_hash) }, SECRET, { expiresIn: '3d' });
-export function verifyResetToken(token, user) {
-  try {
-    const p = jwt.verify(token, SECRET);
-    return p.purpose === 'reset' && p.uid === user?.id && p.fp === fingerprint(user.password_hash);
-  } catch {
-    return false;
-  }
-}
-export function resetTokenUserId(token) {
-  try {
-    const p = jwt.decode(token);
-    return p?.purpose === 'reset' ? p.uid : null;
-  } catch {
-    return null;
-  }
-}
-
 /** Short-lived token for a one-off download link (Excel export from the mobile app). */
 export const downloadToken = (userId) => jwt.sign({ uid: userId, purpose: 'export' }, SECRET, { expiresIn: '2m' });
 
