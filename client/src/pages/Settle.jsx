@@ -3,6 +3,7 @@ import { api } from '../lib/api.js';
 import { useSession, useData } from '../lib/session.jsx';
 import { money, shortDate, METHOD_LABELS } from '../lib/format.js';
 import { useActions } from '../components/Layout.jsx';
+import MoneyTabs from '../components/MoneyTabs.jsx';
 import { Avatar, Loading } from '../components/ui.jsx';
 
 export default function Settle() {
@@ -23,6 +24,7 @@ export default function Settle() {
 
   return (
     <>
+      <MoneyTabs />
       <div className="page-head">
         <div>
           <h1>Settle up</h1>

@@ -11,6 +11,7 @@ export function SessionProvider({ children }) {
   const [unread, setUnread] = useState(0);
   const [toasts, setToasts] = useState([]);
   const toastId = useRef(0);
+  const lastKey = useRef('');
 
   const refresh = useCallback(async () => {
     try {
@@ -20,7 +21,13 @@ export function SessionProvider({ children }) {
       const root = document.documentElement;
       if (data.household?.color) root.style.setProperty('--house', data.household.color);
       else root.style.removeProperty('--house');
-      setState({ loading: false, user: data.user, household: data.household, households: data.households || [], emailEnabled: data.emailEnabled });
+      // Skip the update when nothing changed, so a background refresh never re-renders everything.
+      const key = JSON.stringify([data.user, data.household, data.households]);
+      if (key === lastKey.current) setState((s) => (s.loading ? { ...s, loading: false } : s));
+      else {
+        lastKey.current = key;
+        setState({ loading: false, user: data.user, household: data.household, households: data.households || [], emailEnabled: data.emailEnabled });
+      }
     } catch {
       setState((s) => ({ ...s, loading: false }));
     }
@@ -42,14 +49,19 @@ export function SessionProvider({ children }) {
   useEffect(() => {
     if (!state.user) return undefined;
     pollUnread();
-    const t = setInterval(pollUnread, 20000);
-    const onFocus = () => pollUnread();
+    // Keep the roster fresh too: a roommate who joined (or left) while this tab was open must show up in bill splits.
+    const tick = () => {
+      pollUnread();
+      refresh();
+    };
+    const t = setInterval(tick, 20000);
+    const onFocus = () => tick();
     window.addEventListener('focus', onFocus);
     return () => {
       clearInterval(t);
       window.removeEventListener('focus', onFocus);
     };
-  }, [state.user, pollUnread, version]);
+  }, [state.user, pollUnread, refresh, version]);
 
   const toast = useCallback((message) => {
     const id = ++toastId.current;

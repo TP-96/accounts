@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from 'react';
-import { NavLink, Link, Outlet } from 'react-router-dom';
-import { BookOpen, ReceiptText, ArrowLeftRight, Bell, Home, Plus, BarChart3 } from 'lucide-react';
+import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
+import { ReceiptText, ArrowLeftRight, Bell, Home, Plus, BarChart3 } from 'lucide-react';
 import { useSession } from '../lib/session.jsx';
 import BillForm from './BillForm.jsx';
 import PaymentForm from './PaymentForm.jsx';
@@ -23,21 +23,22 @@ export function Logo({ size = 30 }) {
 const NAV = [
   ['/', 'Home', Home],
   ['/bills', 'Bills', ReceiptText],
-  ['/settle', 'Settle up', ArrowLeftRight],
-  ['/ledger', 'Ledger', BookOpen],
+  ['/settle', 'Money', ArrowLeftRight, ['/settle', '/ledger']],
   ['/stats', 'Stats', BarChart3],
-  ['/notifications', 'Alerts', Bell],
 ];
+const isOn = (pathname, to, group) => (to === '/' ? pathname === '/' : (group || [to]).some((g) => pathname === g || pathname.startsWith(g + '/')));
 
 export default function Layout() {
-  const { user, household, unread } = useSession();
+  const { user, household, unread, refresh } = useSession();
+  const { pathname } = useLocation();
   const [billModal, setBillModal] = useState(null);
   const [payModal, setPayModal] = useState(null);
 
   const actions = {
-    addBill: () => setBillModal({}),
+    // Refresh the roster first so a roommate who just joined is on the form.
+    addBill: async () => { await refresh(); setBillModal({}); },
     editBill: (bill, onSaved) => setBillModal({ bill, onSaved }),
-    recordPayment: (initial = {}) => setPayModal(initial),
+    recordPayment: async (initial = {}) => { await refresh(); setPayModal(initial); },
   };
 
   return (
@@ -49,17 +50,20 @@ export default function Layout() {
           </Link>
           <HouseSwitcher />
           <nav className="topnav" aria-label="Main">
-            {NAV.map(([to, label]) => (
-              <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
-                {label === 'Alerts' ? 'Notifications' : label}
-                {to === '/notifications' && unread > 0 && <span className="count">{unread}</span>}
+            {NAV.map(([to, label, , group]) => (
+              <NavLink key={to} to={to} className={isOn(pathname, to, group) ? 'active' : ''}>
+                {label}
               </NavLink>
             ))}
           </nav>
           <div className="topbar-end">
-            <button className="btn btn-primary btn-sm" onClick={actions.addBill}>
-              <Plus size={16} /> Add a bill
+            <button className="btn btn-primary btn-sm" onClick={actions.addBill} aria-label="Add a bill">
+              <Plus size={16} /> <span className="btn-text">Add a bill</span>
             </button>
+            <Link to="/notifications" className={`bell${pathname === '/notifications' ? ' active' : ''}`} aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'} title="Notifications">
+              <Bell size={20} strokeWidth={1.75} />
+              {unread > 0 && <span className="count">{unread > 9 ? '9+' : unread}</span>}
+            </Link>
             <Link to="/settings" aria-label="Settings and your account" title="Settings">
               <Avatar user={user} />
             </Link>
@@ -72,11 +76,10 @@ export default function Layout() {
       </main>
 
       <nav className="tabbar" aria-label="Main">
-        {NAV.map(([to, label, Icon]) => (
-          <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
+        {NAV.map(([to, label, Icon, group]) => (
+          <NavLink key={to} to={to} className={isOn(pathname, to, group) ? 'active' : ''}>
             <Icon size={21} strokeWidth={1.75} />
             {label}
-            {to === '/notifications' && unread > 0 && <span className="dot" aria-label={`${unread} unread`} />}
           </NavLink>
         ))}
       </nav>

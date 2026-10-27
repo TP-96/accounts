@@ -3,6 +3,7 @@ import { Download } from 'lucide-react';
 import { useSession, useData } from '../lib/session.jsx';
 import { downloadExport } from '../lib/api.js';
 import { money, shortDate } from '../lib/format.js';
+import MoneyTabs from '../components/MoneyTabs.jsx';
 import { Avatar, Loading } from '../components/ui.jsx';
 
 export default function Ledger() {
@@ -34,6 +35,7 @@ export default function Ledger() {
 
   return (
     <>
+      <MoneyTabs />
       <div className="page-head">
         <div>
           <h1>Ledger</h1>
