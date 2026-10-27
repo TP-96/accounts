@@ -283,11 +283,19 @@ test('new features: shares bills, comments, restore, e-Transfer, stats', async (
   assert.match((await a.get('/notifications')).data.notifications[0].title, /Kai commented on "Big room rent"/);
   assert.equal((await a.del(`/comments/${comments[0].id}`)).status, 403, "can't delete someone else's comment");
 
+  // Only the person who added a bill can edit, delete or restore it.
+  const notMine = await b.del(`/bills/${rent.data.bill.id}`);
+  assert.equal(notMine.status, 403);
+  assert.match(notMine.data.error, /can delete it/);
+  assert.equal((await b.put(`/bills/${rent.data.bill.id}`, { title: 'Hacked', amount: 1 })).status, 403);
+  assert.equal((await b.get(`/bills/${rent.data.bill.id}`)).data.bill.title, 'Big room rent');
+
   // Delete then restore.
   await a.del(`/bills/${rent.data.bill.id}`);
   assert.equal((await b.get('/balances')).data.me.iOweCents, 0);
   const deleted = (await a.get('/bills-deleted')).data.bills;
   assert.equal(deleted[0].title, 'Big room rent');
+  assert.equal((await b.post(`/bills/${rent.data.bill.id}/restore`)).status, 403, "can't restore someone else's bill");
   assert.equal((await a.post(`/bills/${rent.data.bill.id}/restore`)).status, 200);
   assert.equal((await b.get('/balances')).data.me.iOweCents, 3000 - 1000);
   assert.equal((await a.get('/bills-deleted')).data.bills.length, 0);

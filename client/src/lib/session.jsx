@@ -151,3 +151,35 @@ export function useTheme() {
   };
   return [theme, setTheme];
 }
+
+export const PALETTES = [
+  ['ledger', 'Ledger green', ['#edf2ea', '#1f3d2e', '#2b8a55']],
+  ['harbour', 'Harbour blue', ['#ecf1f6', '#1d3a57', '#2f6fb0']],
+  ['plum', 'Plum', ['#f2edf4', '#4a2a5c', '#7d4a9a']],
+  ['ember', 'Ember', ['#f5ede4', '#7a3418', '#b4532a']],
+  ['graphite', 'Graphite', ['#eeeeec', '#262626', '#9a9a96']],
+];
+
+/** The colour palette, separate from light/dark. Saved per device. */
+export function usePalette() {
+  const read = () => {
+    try {
+      return localStorage.getItem('hearth-palette') || 'ledger';
+    } catch {
+      return 'ledger';
+    }
+  };
+  const [palette, setPaletteState] = useState(read);
+  const setPalette = (p) => {
+    setPaletteState(p);
+    try {
+      if (p === 'ledger') localStorage.removeItem('hearth-palette');
+      else localStorage.setItem('hearth-palette', p);
+    } catch {
+      /* storage blocked */
+    }
+    if (p === 'ledger') delete document.documentElement.dataset.palette;
+    else document.documentElement.dataset.palette = p;
+  };
+  return [palette, setPalette];
+}

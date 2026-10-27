@@ -78,7 +78,8 @@ Once email is set up, everyone signs in and creates accounts with a **6-digit co
 | **A new roommate moves in** | **Settings → Copy invite link**, then send it to them. |
 | **Someone forgot their password** | They don't need a password at all: **Sign in → Email me a code**. To choose a new one, use **Use a password instead → Forgot password?**, which emails a code. Nobody can reset another person's password, not even the owner. Everything goes through the email on that account. |
 | **Someone moves out** | Make sure they're all square first (their balances show "—" on the home page). Then go to **Settings → Roommates → Remove** (or **Move out** for yourself). Their old bills stay in the history. |
-| **A bill was entered wrong** | Open it from **Bills**, then click **Edit** or **Delete**. Everyone on it is told. |
+| **A bill was entered wrong** | Open it from **Bills**, then click **Edit** or **Delete**. Only the person who added a bill can change, delete or restore it; anyone else can leave a comment on it asking for a fix. Everyone on it is told about changes. |
+| **You want different colours** | **Settings → Theme**: Ledger green, Harbour blue, Plum, Ember or Graphite. Each works in light and dark mode and is saved per device. |
 | **A bill was deleted by mistake** | **Bills**, scroll to **Recently deleted**, then **Restore**. Works for 90 days. |
 | **You live in more than one house or group** | Tap the house name at the top, then **Add or join another house**. Each house has its own colour (change it in **Settings**), shown as a stripe across the top, so you always know which one you're in. Bills, balances and alerts stay separate per house, and the switcher shows unread alerts for the other houses. |
 | **You want to see where the money goes** | The **Stats** page. **Overview** shows spending by month, by category and who's been paying up front. **Month** lets you pick any month and see its bills, categories and who paid. |

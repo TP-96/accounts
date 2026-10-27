@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Copy, Download, LogOut, UserMinus } from 'lucide-react';
 import { api, downloadExport } from '../lib/api.js';
 import { PUBLIC_URL } from '../lib/platform.js';
-import { useSession } from '../lib/session.jsx';
+import { useSession, usePalette, PALETTES } from '../lib/session.jsx';
 import { Avatar, ThemeSwitch, ErrorNote, Modal, INK_COLORS, inkFor } from '../components/ui.jsx';
 import { HouseTile } from '../components/HouseSwitcher.jsx';
 
@@ -232,6 +232,7 @@ export default function Settings() {
               </div>
               <ThemeSwitch />
             </div>
+            <ThemePicker />
             <label className="switch">
               <div>
                 <div style={{ fontWeight: 650 }}>Email me about bills</div>
@@ -315,5 +316,27 @@ export default function Settings() {
         </Modal>
       )}
     </>
+  );
+}
+
+function ThemePicker() {
+  const [palette, setPalette] = usePalette();
+  return (
+    <div style={{ padding: '4px 0 14px' }}>
+      <div style={{ fontWeight: 650 }}>Theme</div>
+      <div className="faint">Colours for this device. Red still means you owe and green means you're owed.</div>
+      <div className="palettes" role="group" aria-label="Theme">
+        {PALETTES.map(([key, label, chips]) => (
+          <button key={key} type="button" className="palette" aria-pressed={palette === key} onClick={() => setPalette(key)}>
+            <span className="palette-chips" aria-hidden="true">
+              {chips.map((c) => (
+                <span key={c} style={{ background: c }} />
+              ))}
+            </span>
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

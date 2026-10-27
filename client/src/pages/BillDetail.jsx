@@ -72,14 +72,20 @@ export default function BillDetail() {
             )}
           </p>
         </div>
-        <div className="inline-actions">
-          <button className="btn btn-sm" onClick={() => actions.editBill(b)}>
-            <Pencil size={15} /> Edit
-          </button>
-          <button className="btn btn-sm btn-danger" onClick={() => setConfirmDelete(true)}>
-            <Trash2 size={15} /> Delete
-          </button>
-        </div>
+        {b.createdBy === user.id ? (
+          <div className="inline-actions">
+            <button className="btn btn-sm" onClick={() => actions.editBill(b)}>
+              <Pencil size={15} /> Edit
+            </button>
+            <button className="btn btn-sm btn-danger" onClick={() => setConfirmDelete(true)}>
+              <Trash2 size={15} /> Delete
+            </button>
+          </div>
+        ) : (
+          <p className="faint" style={{ maxWidth: '26ch', fontSize: '0.875rem', margin: 0 }}>
+            Only {creator?.name || 'the person who added it'} can edit or delete this bill. Leave a comment below to ask for a change.
+          </p>
+        )}
       </div>
 
       <div className="two-col">

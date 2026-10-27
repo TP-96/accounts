@@ -4,6 +4,7 @@ import { q } from '../db.js';
 import { requireHousehold } from '../auth.js';
 import { fmt, ValidationError } from '../money.js';
 import { notify, logActivity } from '../notify.js';
+import { notCreator } from './money.js';
 
 const r = Router();
 const hid = (req) => req.user.household_id;
@@ -299,17 +300,18 @@ r.delete('/comments/:id', requireHousehold, async (req, res) => {
 
 r.get('/bills-deleted', requireHousehold, async (req, res) => {
   const rows = await q.all(
-    `SELECT id, title, amount_cents, date, paid_by, deleted_at FROM bills
+    `SELECT id, title, amount_cents, date, paid_by, created_by, deleted_at FROM bills
       WHERE household_id = ? AND deleted_at IS NOT NULL AND deleted_at >= to_char((now() - interval '90 days') AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
       ORDER BY deleted_at DESC LIMIT 50`,
     hid(req)
   );
-  res.json({ bills: rows.map((b) => ({ id: b.id, title: b.title, amountCents: b.amount_cents, date: b.date, paidBy: b.paid_by, deletedAt: b.deleted_at })) });
+  res.json({ bills: rows.map((b) => ({ id: b.id, title: b.title, amountCents: b.amount_cents, date: b.date, paidBy: b.paid_by, createdBy: b.created_by, deletedAt: b.deleted_at })) });
 });
 
 r.post('/bills/:id/restore', requireHousehold, async (req, res) => {
   const bill = await q.get('SELECT * FROM bills WHERE id = ? AND household_id = ? AND deleted_at IS NOT NULL', Number(req.params.id) || 0, hid(req));
   if (!bill) return res.status(404).json({ error: 'That bill is not in the recently deleted list' });
+  if (await notCreator(req, res, bill.created_by, 'restore')) return;
   // Everyone on it must still live here, or the balances would point at someone who left.
   const gone = await q.all(
     `SELECT u.name FROM bill_shares s JOIN users u ON u.id = s.user_id

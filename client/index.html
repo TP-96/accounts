@@ -17,6 +17,8 @@
       try {
         var t = localStorage.getItem('hearth-theme');
         if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+        var p = localStorage.getItem('hearth-palette');
+        if (p) document.documentElement.dataset.palette = p;
       } catch (e) {}
     </script>
   </head>

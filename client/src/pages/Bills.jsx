@@ -179,9 +179,13 @@ export default function Bills() {
                   </span>
                   <span className="row-end">
                     <span className="row-amt">{money(b.amountCents)}</span>
-                    <button className="btn btn-sm" onClick={() => restore(b)}>
-                      Restore
-                    </button>
+                    {b.createdBy === user.id ? (
+                      <button className="btn btn-sm" onClick={() => restore(b)}>
+                        Restore
+                      </button>
+                    ) : (
+                      <span className="faint" style={{ fontSize: '0.8rem' }}>Only {memberById(b.createdBy)?.name || 'whoever added it'} can restore</span>
+                    )}
                   </span>
                 </li>
               ))}

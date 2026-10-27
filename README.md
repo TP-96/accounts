@@ -31,6 +31,8 @@ Bill splitting for roommates, a less janky Splitwise: unlimited bills, no ads, n
   - balances update instantly
   - "simplify debts" shows the fewest payments that settle the whole house
 - **Balances:** a statement showing what you owe each roommate and what each owes you, with the total underlined.
+- **Themes:** five colour palettes (Ledger green, Harbour blue, Plum, Ember, Graphite), each with light and dark versions.
+- **Bill ownership:** only the person who added a bill can edit, delete or restore it.
 - **Several houses:** belong to more than one house or group, switch from the top bar. Each has its own colour, bills, balances and alerts.
 - **Stats:** an Overview tab and a Month tab (pick any month)
   - spending per month (your share versus everyone else's), by category, and who has been paying up front

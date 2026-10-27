@@ -65,9 +65,19 @@ r.post('/bills', async (req, res) => {
   res.status(201).json({ bill: await getBill(hid(req), id) });
 });
 
+/** Only the person who added a bill may edit, delete or restore it. Sends a 403 and returns true otherwise. */
+export async function notCreator(req, res, createdBy, verb) {
+  if (createdBy === req.user.id) return false;
+  const who = await q.get('SELECT name FROM users WHERE id = ?', createdBy);
+  res.status(403).json({ error: `Only ${who?.name || 'the person who added this bill'} can ${verb} it, because they added it. Leave a comment on the bill to ask for a change.` });
+  return true;
+}
+
 r.put('/bills/:id', async (req, res) => {
   const id = Number(req.params.id);
-  if (!(await getBill(hid(req), id))) return res.status(404).json({ error: 'Bill not found' });
+  const bill = await getBill(hid(req), id);
+  if (!bill) return res.status(404).json({ error: 'Bill not found' });
+  if (await notCreator(req, res, bill.createdBy, 'edit')) return;
   await updateBill(hid(req), req.user.id, id, await normalizeBill(hid(req), req.body));
   res.json({ bill: await getBill(hid(req), id) });
 });
@@ -75,6 +85,7 @@ r.put('/bills/:id', async (req, res) => {
 r.delete('/bills/:id', async (req, res) => {
   const bill = await getBill(hid(req), Number(req.params.id));
   if (!bill) return res.status(404).json({ error: 'Bill not found' });
+  if (await notCreator(req, res, bill.createdBy, 'delete')) return;
   await tx(async (t) => {
     await t.run('UPDATE bills SET deleted_at = now_iso() WHERE id = ?', bill.id);
     // Payments made specifically for this bill stay as plain payments, so money already sent isn't lost.
