@@ -1,4 +1,5 @@
 import { API_BASE, getToken, setToken, isNative } from './platform.js';
+import { getHouse, setHouse } from './house.js';
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -12,6 +13,7 @@ async function request(method, url, body) {
   if (body) headers['Content-Type'] = 'application/json';
   const token = isNative ? await getToken() : null;
   if (token) headers.Authorization = `Bearer ${token}`;
+  if (getHouse()) headers['X-Household'] = String(getHouse());
 
   let res;
   try {
@@ -34,7 +36,10 @@ async function request(method, url, body) {
 
   // Native apps keep the session token themselves (web uses an httpOnly cookie).
   if (data?.token) await setToken(data.token);
-  if (url === '/auth/logout') await setToken(null);
+  if (url === '/auth/logout') {
+    await setToken(null);
+    setHouse(null);
+  }
   return data;
 }
 
@@ -49,7 +54,7 @@ export const api = {
 /** Download the Excel export: a normal link on the web, a short-lived link in the system browser on mobile. */
 export async function downloadExport() {
   if (!isNative) {
-    window.location.href = `${API_BASE}/api/export.xlsx`;
+    window.location.href = `${API_BASE}/api/export.xlsx${getHouse() ? `?house=${getHouse()}` : ''}`;
     return;
   }
   const { path } = await api.post('/export-link');

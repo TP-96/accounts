@@ -49,6 +49,7 @@ export async function runRecurring(today = new Date().toISOString().slice(0, 10)
           title: `Recurring bill "${template.title}" was paused`,
           body: `It couldn't be created: ${err.message}. Re-add it with the current roommates.`,
           link: '/bills',
+          householdId: r.household_id,
         });
         break;
       }

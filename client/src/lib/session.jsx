@@ -1,11 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './api.js';
 import { setCurrency } from './format.js';
+import { setHouse } from './house.js';
 
 const SessionCtx = createContext(null);
 
 export function SessionProvider({ children }) {
-  const [state, setState] = useState({ loading: true, user: null, household: null, emailEnabled: false });
+  const [state, setState] = useState({ loading: true, user: null, household: null, households: [], emailEnabled: false });
   const [version, setVersion] = useState(0); // bump to refetch data everywhere
   const [unread, setUnread] = useState(0);
   const [toasts, setToasts] = useState([]);
@@ -15,7 +16,11 @@ export function SessionProvider({ children }) {
     try {
       const data = await api.get('/me');
       setCurrency(data.household?.currency);
-      setState({ loading: false, user: data.user, household: data.household, emailEnabled: data.emailEnabled });
+      setHouse(data.household?.id || null); // the server's answer wins if our remembered house was stale
+      const root = document.documentElement;
+      if (data.household?.color) root.style.setProperty('--house', data.household.color);
+      else root.style.removeProperty('--house');
+      setState({ loading: false, user: data.user, household: data.household, households: data.households || [], emailEnabled: data.emailEnabled });
     } catch {
       setState((s) => ({ ...s, loading: false }));
     }
@@ -52,10 +57,20 @@ export function SessionProvider({ children }) {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3200);
   }, []);
 
+  /** Look at a different house. Pages remount (keyed by house), so nothing from the old one lingers. */
+  const switchHouse = useCallback(
+    async (id) => {
+      setHouse(id);
+      await refresh();
+    },
+    [refresh]
+  );
+
   const value = useMemo(
     () => ({
       ...state,
       refresh,
+      switchHouse,
       version,
       bump: () => setVersion((v) => v + 1),
       unread,
@@ -63,7 +78,7 @@ export function SessionProvider({ children }) {
       toast,
       memberById: (id) => state.household?.members.find((m) => m.id === id) || state.household?.formerMembers?.find((m) => m.id === id),
     }),
-    [state, refresh, version, unread, toast]
+    [state, refresh, switchHouse, version, unread, toast]
   );
 
   return (

@@ -43,7 +43,7 @@ export async function pairwiseBalances(householdId) {
 
 /** Balance summary from one user's point of view. Positive = they owe me. */
 export async function balancesFor(householdId, userId) {
-  const members = await q.all('SELECT id, name, color FROM users WHERE household_id = ? ORDER BY id', householdId);
+  const members = await q.all('SELECT id, name, color FROM active_members WHERE household_id = ? ORDER BY id', householdId);
   const net = await pairwiseBalances(householdId);
   const people = members
     .filter((m) => m.id !== userId)
@@ -59,7 +59,7 @@ export async function balancesFor(householdId, userId) {
 
 /** Each member's net position in the house. Positive = house owes them. */
 export async function householdNets(householdId) {
-  const members = await q.all('SELECT id, name, color FROM users WHERE household_id = ? ORDER BY id', householdId);
+  const members = await q.all('SELECT id, name, color FROM active_members WHERE household_id = ? ORDER BY id', householdId);
   const net = await pairwiseBalances(householdId);
   const totals = new Map(members.map((m) => [m.id, 0]));
   for (const [key, cents] of net) {
@@ -100,7 +100,7 @@ export async function simplifyDebts(householdId) {
  */
 export async function ledgerFor(householdId, userId, counterpartId = null) {
   const { shares, payments } = await loadEdges(householdId);
-  const names = new Map((await q.all('SELECT id, name FROM users WHERE household_id = ? OR former_household_id = ?', householdId, householdId)).map((u) => [u.id, u.name]));
+  const names = new Map((await q.all('SELECT id, name FROM active_members WHERE household_id = ? UNION SELECT id, name FROM former_members WHERE household_id = ?', householdId, householdId)).map((u) => [u.id, u.name]));
   const rows = [];
 
   for (const s of shares) {

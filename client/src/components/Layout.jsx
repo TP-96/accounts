@@ -5,6 +5,7 @@ import { useSession } from '../lib/session.jsx';
 import BillForm from './BillForm.jsx';
 import PaymentForm from './PaymentForm.jsx';
 import { Avatar } from './ui.jsx';
+import HouseSwitcher from './HouseSwitcher.jsx';
 
 const ActionsCtx = createContext(null);
 export const useActions = () => useContext(ActionsCtx);
@@ -43,13 +44,10 @@ export default function Layout() {
     <ActionsCtx.Provider value={actions}>
       <header className="topbar">
         <div className="topbar-in">
-          <Link to="/" className="brand">
+          <Link to="/" className="brand" aria-label="Hearth home">
             <Logo />
-            <span className="brand-text">
-              <strong>Hearth</strong>
-              <span>{household.name}</span>
-            </span>
           </Link>
+          <HouseSwitcher />
           <nav className="topnav" aria-label="Main">
             {NAV.map(([to, label]) => (
               <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
@@ -70,7 +68,7 @@ export default function Layout() {
       </header>
 
       <main className="main">
-        <Outlet />
+        <Outlet key={household.id} />
       </main>
 
       <nav className="tabbar" aria-label="Main">

@@ -18,7 +18,7 @@ export async function normalizeBill(householdId, input) {
   const date = input.date || new Date().toISOString().slice(0, 10);
   if (!isDate(date)) throw new ValidationError('Invalid date');
 
-  const memberIds = new Set((await q.all('SELECT id FROM users WHERE household_id = ?', householdId)).map((u) => u.id));
+  const memberIds = new Set((await q.all('SELECT id FROM active_members WHERE household_id = ?', householdId)).map((u) => u.id));
   const paidBy = Number(input.paidBy);
   if (!memberIds.has(paidBy)) throw new ValidationError('Whoever paid must be in the household');
 
@@ -60,6 +60,7 @@ export async function createBill(householdId, actorId, bill, { recurringId = nul
         title: `You owe ${payer.name} ${fmt(s.shareCents)} for ${bill.title}`,
         body: `${actor.name} added "${bill.title}" — ${fmt(bill.amountCents)} total, paid by ${payer.name}.${bill.description ? ` Note: ${bill.description}` : ''}`,
         link: `/bills/${id}`,
+        householdId,
       });
     }
   }
@@ -79,7 +80,7 @@ export async function updateBill(householdId, actorId, billId, bill) {
   const actor = await q.get('SELECT name FROM users WHERE id = ?', actorId);
   await logActivity(householdId, actorId, 'bill.updated', `${actor.name} edited "${bill.title}"`);
   const affected = bill.shares.map((s) => s.userId).filter((id) => id !== actorId);
-  await notify(affected, { type: 'bill', title: `${actor.name} edited "${bill.title}"`, body: 'Your balance may have changed.', link: `/bills/${billId}` });
+  await notify(affected, { type: 'bill', title: `${actor.name} edited "${bill.title}"`, body: 'Your balance may have changed.', link: `/bills/${billId}`, householdId });
 }
 
 export async function getBill(householdId, billId) {

@@ -159,6 +159,30 @@ const MIGRATIONS = [
      CREATE INDEX IF NOT EXISTS idx_login_codes_email ON login_codes(email, id);
      ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`,
   ],
+  [
+    5,
+    // Belonging to more than one house. Each house gets its own accent colour, and each notification
+    // remembers which house it came from. users.household_id stays as "the house you last used".
+    `CREATE TABLE IF NOT EXISTS household_members (
+       user_id INTEGER NOT NULL REFERENCES users(id),
+       household_id INTEGER NOT NULL REFERENCES households(id),
+       joined_at TEXT NOT NULL DEFAULT now_iso(),
+       left_at TEXT,
+       PRIMARY KEY (user_id, household_id)
+     );
+     CREATE INDEX IF NOT EXISTS idx_household_members_house ON household_members(household_id);
+     INSERT INTO household_members (user_id, household_id) SELECT id, household_id FROM users WHERE household_id IS NOT NULL ON CONFLICT DO NOTHING;
+     INSERT INTO household_members (user_id, household_id, left_at) SELECT id, former_household_id, now_iso() FROM users WHERE former_household_id IS NOT NULL AND household_id IS DISTINCT FROM former_household_id ON CONFLICT DO NOTHING;
+     ALTER TABLE households ADD COLUMN IF NOT EXISTS color TEXT;
+     UPDATE households SET color = (ARRAY['#2f7a55','#3b5b92','#9a3d63','#9a6a1c','#2b7f8f','#6a4c93','#a8452d','#5a6b2e'])[1 + (id % 8)] WHERE color IS NULL;
+     ALTER TABLE notifications ADD COLUMN IF NOT EXISTS household_id INTEGER;
+     CREATE OR REPLACE VIEW active_members AS
+       SELECT m.household_id AS household_id, u.id, u.name, u.email, u.color, u.etransfer
+         FROM household_members m JOIN users u ON u.id = m.user_id WHERE m.left_at IS NULL;
+     CREATE OR REPLACE VIEW former_members AS
+       SELECT m.household_id AS household_id, u.id, u.name, u.color
+         FROM household_members m JOIN users u ON u.id = m.user_id WHERE m.left_at IS NOT NULL`,
+  ],
 ];
 
 /** "a = ? AND b = ?" -> "a = $1 AND b = $2" (skips ? inside quoted strings). */

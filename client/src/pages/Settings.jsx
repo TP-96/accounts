@@ -4,6 +4,9 @@ import { api, downloadExport } from '../lib/api.js';
 import { PUBLIC_URL } from '../lib/platform.js';
 import { useSession } from '../lib/session.jsx';
 import { Avatar, ThemeSwitch, ErrorNote, Modal, INK_COLORS, inkFor } from '../components/ui.jsx';
+import { HouseTile } from '../components/HouseSwitcher.jsx';
+
+const HOUSE_COLORS = ['#2f7a55', '#3b5b92', '#9a3d63', '#9a6a1c', '#2b7f8f', '#6a4c93', '#a8452d', '#5a6b2e'];
 
 async function copyText(text, toast, done) {
   try {
@@ -66,7 +69,9 @@ export default function Settings() {
         <div>
           <section className="section">
             <div className="section-head">
-              <h2>{household.name}</h2>
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <HouseTile house={household} size={30} /> {household.name}
+              </h2>
             </div>
             <div className="month-label">Roommates</div>
             <ul className="rows" style={{ marginBottom: 28 }}>
@@ -117,6 +122,26 @@ export default function Settings() {
                   toast('House renamed');
                 }}
               >
+                <div className="field">
+                  <span>House colour</span>
+                  <div className="swatches" role="group" aria-label="House colour">
+                    {HOUSE_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        className="swatch"
+                        style={{ background: c }}
+                        aria-pressed={household.color === c}
+                        aria-label={`Use this colour for ${household.name}`}
+                        onClick={async () => {
+                          await api.patch('/household', { color: c });
+                          await refresh();
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <small className="faint">Shows next to the house name at the top, so you can tell your houses apart at a glance.</small>
+                </div>
                 <label className="field">
                   <span>House name</span>
                   <input className="input" value={houseName} onChange={(e) => setHouseName(e.target.value)} maxLength={60} />
@@ -266,7 +291,7 @@ export default function Settings() {
 
       {removing && (
         <Modal
-          title={removing.id === user.id ? 'Move out of the house?' : `Remove ${removing.name}?`}
+          title={removing.id === user.id ? `Move out of ${household.name}?` : `Remove ${removing.name}?`}
           onClose={() => setRemoving(null)}
           footer={
             <>

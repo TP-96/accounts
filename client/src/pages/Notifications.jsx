@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { useSession, useData } from '../lib/session.jsx';
 import { timeAgo } from '../lib/format.js';
 import { Loading } from '../components/ui.jsx';
+import { HouseChip } from '../components/HouseSwitcher.jsx';
 
 export default function Notifications() {
-  const { setUnread, bump, emailEnabled, user } = useSession();
+  const { setUnread, bump, emailEnabled, user, household, households, switchHouse } = useSession();
+  const nav = useNavigate();
   const { data } = useData('/notifications');
 
   // Mark everything read a moment after the page opens, so unread dots are visible first.
@@ -57,9 +59,22 @@ export default function Notifications() {
         ) : (
           <div>
             {data.notifications.map((n) => (
-              <Link key={n.id} to={n.link || '/'} className={`notif ${n.read ? '' : 'unread'}`}>
+              <Link
+                key={n.id}
+                to={n.link || '/'}
+                className={`notif ${n.read ? '' : 'unread'}`}
+                onClick={async (e) => {
+                  // An alert from another house: switch to it first, so the bill it links to exists.
+                  if (n.house && n.house.id !== household.id) {
+                    e.preventDefault();
+                    await switchHouse(n.house.id);
+                    nav(n.link || '/');
+                  }
+                }}
+              >
                 <span className="dot" aria-hidden="true" />
                 <div className="row-main">
+                  {households.length > 1 && n.house && <HouseChip house={n.house} />}
                   <div className="row-title">{n.title}</div>
                   {n.body && <div className="muted" style={{ fontSize: '0.925rem' }}>{n.body}</div>}
                   <div className="row-meta">

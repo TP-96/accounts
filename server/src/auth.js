@@ -76,7 +76,17 @@ export async function loadUser(req, _res, next) {
       const p = jwt.verify(token, SECRET);
       if (!p.purpose) uid = p.uid;
     }
-    if (uid) req.user = (await q.get('SELECT * FROM users WHERE id = ?', uid)) || null;
+    if (uid) {
+      const user = await q.get('SELECT * FROM users WHERE id = ?', uid);
+      if (user) {
+        // Which house this request is about: the one the app asks for (X-Household header, or ?house= for
+        // plain downloads), if the person belongs to it; otherwise the house they last used.
+        const mine = (await q.all('SELECT household_id FROM household_members WHERE user_id = ? AND left_at IS NULL ORDER BY joined_at, household_id', uid)).map((m) => m.household_id);
+        const want = Number(req.headers['x-household'] || req.query.house || 0);
+        const active = mine.includes(want) ? want : mine.includes(user.household_id) ? user.household_id : (mine[0] ?? null);
+        req.user = { ...user, household_id: active };
+      }
+    }
   } catch {
     req.user = null;
   }

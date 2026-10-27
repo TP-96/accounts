@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { SessionProvider, useSession } from './lib/session.jsx';
 import Layout from './components/Layout.jsx';
 import Auth from './pages/Auth.jsx';
-import Onboard from './pages/Onboard.jsx';
+import Onboard, { AddHouse } from './pages/Onboard.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Bills from './pages/Bills.jsx';
 import BillDetail from './pages/BillDetail.jsx';
@@ -30,6 +30,7 @@ function Gate() {
         <Route path="stats" element={<Stats />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="houses/new" element={<AddHouse />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -45,7 +45,7 @@ const monthLabel = (ym, long = false) => {
  * Spending per month: each column is the house total, split into your share (bottom)
  * and everyone else's (top), separated by a 2px gap.
  */
-export function MonthlyChart({ months }) {
+export function MonthlyChart({ months, onPick }) {
   const [ref, width] = useWidth();
   const [hover, setHover] = useState(null);
   const height = 240;
@@ -54,7 +54,7 @@ export function MonthlyChart({ months }) {
   const innerH = height - pad.top - pad.bottom;
   const max = niceMax(Math.max(...months.map((m) => m.houseCents), 0));
   const band = months.length ? innerW / months.length : 0;
-  const barW = Math.min(24, Math.max(6, band * 0.6));
+  const barW = Math.min(44, Math.max(6, band * 0.6));
   const y = (c) => pad.top + innerH - (c / max) * innerH;
   const ticks = [0, max / 2, max];
   const labelEvery = band < 34 ? Math.ceil(34 / band) : 1;
@@ -96,7 +96,8 @@ export function MonthlyChart({ months }) {
                   width={band}
                   height={innerH}
                   onMouseEnter={() => setHover(i)}
-                  onClick={() => setHover(i)}
+                  onClick={() => (onPick ? onPick(m.month) : setHover(i))}
+                  style={onPick ? { cursor: 'pointer' } : undefined}
                 />
               </g>
             );

@@ -34,7 +34,7 @@ app.use((req, res, next) => {
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Household');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.setHeader('Access-Control-Max-Age', '86400');
   }
@@ -82,11 +82,16 @@ api.use(accountRoutes);
 api.use(codeRoutes);
 
 api.get('/notifications', requireUser, async (req, res) => {
-  const rows = await q.all('SELECT * FROM notifications WHERE user_id = ? ORDER BY id DESC LIMIT 100', req.user.id);
+  const rows = await q.all(
+    `SELECT n.*, h.name AS house_name, h.color AS house_color FROM notifications n
+       LEFT JOIN households h ON h.id = n.household_id
+      WHERE n.user_id = ? ORDER BY n.id DESC LIMIT 100`,
+    req.user.id
+  );
   const { n } = await q.get('SELECT COUNT(*)::int AS n FROM notifications WHERE user_id = ? AND read_at IS NULL', req.user.id);
   res.json({
     unread: n,
-    notifications: rows.map((x) => ({ id: x.id, type: x.type, title: x.title, body: x.body, link: x.link, read: !!x.read_at, createdAt: x.created_at })),
+    notifications: rows.map((x) => ({ id: x.id, type: x.type, title: x.title, body: x.body, link: x.link, read: !!x.read_at, createdAt: x.created_at, house: x.household_id ? { id: x.household_id, name: x.house_name, color: x.house_color } : null })),
   });
 });
 api.post('/notifications/read', requireUser, async (req, res) => {
@@ -101,7 +106,7 @@ api.post('/notifications/read', requireUser, async (req, res) => {
 
 // The mobile app can't attach its token to a plain download, so it asks for a 2-minute link.
 api.post('/export-link', requireHousehold, (req, res) => {
-  res.json({ path: `/api/export.xlsx?dl=${encodeURIComponent(downloadToken(req.user.id))}` });
+  res.json({ path: `/api/export.xlsx?dl=${encodeURIComponent(downloadToken(req.user.id))}&house=${req.user.household_id}` });
 });
 
 api.get('/export.xlsx', requireHousehold, async (req, res) => {

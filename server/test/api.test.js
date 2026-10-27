@@ -300,7 +300,8 @@ test('new features: shares bills, comments, restore, e-Transfer, stats', async (
 
   // Stats for this month.
   const st = (await a.get('/stats?range=3')).data;
-  assert.equal(st.months.length, 3);
+  assert.equal(st.months.length, 1, 'months before the first bill are not shown');
+  assert.equal(st.summary.hasLastMonth, false);
   assert.deepEqual(st.months.at(-1), { month: thisMonth, houseCents: 11000, myShareCents: 7000, iPaidCents: 9000 });
   assert.deepEqual(st.byCategory.map((c) => [c.category, c.totalCents, c.myShareCents]), [['rent', 9000, 6000], ['groceries', 2000, 1000]]);
   const ivy = st.byPerson.find((p) => p.user.name === 'Ivy');

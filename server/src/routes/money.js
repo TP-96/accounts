@@ -12,7 +12,7 @@ r.use(requireHousehold);
 
 const hid = (req) => req.user.household_id;
 const isMember = async (householdId, userId) =>
-  Number.isInteger(userId) && !!(await q.get('SELECT 1 AS ok FROM users WHERE id = ? AND household_id = ?', userId, householdId));
+  Number.isInteger(userId) && !!(await q.get('SELECT 1 AS ok FROM active_members WHERE id = ? AND household_id = ?', userId, householdId));
 const nameOf = async (id) => (await q.get('SELECT name FROM users WHERE id = ?', id))?.name || 'Someone';
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -86,6 +86,7 @@ r.delete('/bills/:id', async (req, res) => {
     title: `${req.user.name} deleted "${bill.title}"`,
     body: `The ${fmt(bill.amountCents)} bill no longer counts toward balances.`,
     link: '/bills',
+    householdId: hid(req),
   });
   res.json({ ok: true });
 });
@@ -149,6 +150,7 @@ async function recordPayment(req, p) {
     title: `${from} paid ${to} ${fmt(p.amountCents)}`,
     body: `${p.note ? `${p.note}. ` : ''}Recorded by ${req.user.name}. Balances have been updated.`,
     link: '/ledger',
+    householdId: hid(req),
   });
   return { id: row.id };
 }
@@ -191,6 +193,7 @@ r.delete('/payments/:id', async (req, res) => {
     title: `A ${fmt(p.amount_cents)} payment was removed`,
     body: `${req.user.name} removed the payment from ${from} to ${to}. Balances were recalculated.`,
     link: '/ledger',
+    householdId: hid(req),
   });
   res.json({ ok: true });
 });
@@ -223,6 +226,7 @@ r.post('/nudge', async (req, res) => {
     title: `Reminder: you owe ${req.user.name} ${fmt(bal.balanceCents)}`,
     body: `${req.user.name} sent a friendly nudge. Record the payment in Hearth once you've paid.`,
     link: '/settle',
+    householdId: hid(req),
   });
   res.json({ ok: true });
 });

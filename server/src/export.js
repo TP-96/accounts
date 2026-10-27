@@ -20,8 +20,8 @@ const cents = (c) => Math.round(c) / 100;
 /** Build an .xlsx workbook of every transaction plus balances/ledger for the requesting user. */
 export async function buildWorkbook(householdId, userId) {
   const household = await q.get('SELECT * FROM households WHERE id = ?', householdId);
-  const members = await q.all('SELECT id, name FROM users WHERE household_id = ? ORDER BY id', householdId);
-  const everyone = await q.all('SELECT id, name FROM users WHERE household_id = ? OR former_household_id = ?', householdId, householdId);
+  const members = await q.all('SELECT id, name FROM active_members WHERE household_id = ? ORDER BY id', householdId);
+  const everyone = await q.all('SELECT id, name FROM active_members WHERE household_id = ? UNION SELECT id, name FROM former_members WHERE household_id = ?', householdId, householdId);
   const name = new Map(everyone.map((m) => [m.id, m.name]));
   const me = name.get(userId);
 
