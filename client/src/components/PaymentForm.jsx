@@ -27,7 +27,7 @@ export default function PaymentForm({ initial = {}, onClose }) {
     setSaving(true);
     try {
       await api.post('/payments', { fromUser, toUser, amountCents: cents, method, date, note });
-      toast(`Recorded ${money(cents)} from ${name(fromUser)} to ${name(toUser)}`);
+      toast(`Recorded: ${name(fromUser)} paid ${toUser === user.id ? 'you' : name(toUser)} ${money(cents)}`);
       bump();
       onClose();
     } catch (err) {

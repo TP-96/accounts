@@ -124,6 +124,12 @@ test('full roommate flow: bills, payments, balances, ledger, export', async () =
 
   // Bea records a partial $20 manual payment to Alex.
   assert.equal((await b.post('/payments', { toUser: A.id, amount: '20', note: 'part of hydro' })).status, 201);
+  // Cheques and bank drafts are recorded as such (and undone again so the totals below are unchanged).
+  for (const method of ['cheque', 'bankdraft']) {
+    const pay = await b.post('/payments', { toUser: A.id, amount: '1', method });
+    assert.equal((await b.get('/payments')).data.payments.find((x) => x.id === pay.data.payment.id).method, method);
+    assert.equal((await b.del(`/payments/${pay.data.payment.id}`)).status, 200);
+  }
 
   bal = (await a.get('/balances')).data;
   assert.equal(bal.me.owedToMeCents, 3000); // Bea still owes 30

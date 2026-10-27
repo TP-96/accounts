@@ -46,7 +46,7 @@ export const CATEGORY_LABELS = {
   other: 'Other',
 };
 
-export const METHOD_LABELS = { etransfer: 'e-Transfer', cash: 'Cash', card: 'Card', paypal: 'PayPal', other: 'Other' };
+export const METHOD_LABELS = { etransfer: 'e-Transfer', cash: 'Cash', cheque: 'Cheque', bankdraft: 'Bank draft', card: 'Card', paypal: 'PayPal', other: 'Other' };
 
 /** Parse a dollar string to cents, or null if invalid. */
 export function parseCents(str) {

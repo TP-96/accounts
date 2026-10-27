@@ -17,7 +17,10 @@ function styleHeader(ws) {
 
 const cents = (c) => Math.round(c) / 100;
 
+const METHOD_NAMES = { etransfer: 'e-Transfer', cash: 'Cash', cheque: 'Cheque', bankdraft: 'Bank draft', card: 'Card', paypal: 'PayPal', other: 'Other' };
+
 /** Build an .xlsx workbook of every transaction plus balances/ledger for the requesting user. */
+
 export async function buildWorkbook(householdId, userId) {
   const household = await q.get('SELECT * FROM households WHERE id = ?', householdId);
   const members = await q.all('SELECT id, name FROM active_members WHERE household_id = ? ORDER BY id', householdId);
@@ -34,7 +37,7 @@ export async function buildWorkbook(householdId, userId) {
   const payments = await q.all('SELECT * FROM payments WHERE household_id = ? AND deleted_at IS NULL', householdId);
   const tx = [
     ...bills.map((b) => ({ date: b.date, type: 'Bill', name: b.title, description: b.description, category: b.category, from: name.get(b.paid_by), to: 'Split', amount: b.amount_cents, split: b.split_type, createdAt: b.created_at })),
-    ...payments.map((p) => ({ date: p.date, type: 'Payment', name: p.note || 'Payment', description: p.method, category: '', from: name.get(p.from_user), to: name.get(p.to_user), amount: p.amount_cents, split: '', createdAt: p.created_at })),
+    ...payments.map((p) => ({ date: p.date, type: 'Payment', name: p.note || 'Payment', description: METHOD_NAMES[p.method] || p.method, category: '', from: name.get(p.from_user), to: name.get(p.to_user), amount: p.amount_cents, split: '', createdAt: p.created_at })),
   ].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt));
 
   const wsTx = wb.addWorksheet('Transactions');

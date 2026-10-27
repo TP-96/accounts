@@ -140,7 +140,7 @@ r.delete('/recurring/:id', async (req, res) => {
 
 /* ---------------- Payments ---------------- */
 
-const METHODS = ['etransfer', 'cash', 'card', 'paypal', 'other'];
+const METHODS = ['etransfer', 'cash', 'cheque', 'bankdraft', 'card', 'paypal', 'other'];
 
 async function recordPayment(req, p) {
   const h = hid(req);
