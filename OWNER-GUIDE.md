@@ -75,19 +75,19 @@ Once email is set up, everyone signs in and creates accounts with a **6-digit co
 
 | Situation | What to do |
 |---|---|
-| **A new roommate moves in** | **Settings → Copy invite link**, then send it to them. |
+| **A new roommate moves in** | **Settings → House → Copy invite link**, then send it to them. |
 | **Someone forgot their password** | They don't need a password at all: **Sign in → Email me a code**. To choose a new one, use **Use a password instead → Forgot password?**, which emails a code. Nobody can reset another person's password, not even the owner. Everything goes through the email on that account. |
-| **Someone moves out** | Make sure they're all square first (their balances show "—" on the home page). Then go to **Settings → Roommates → Remove** (or **Move out** for yourself). Their old bills stay in the history. |
+| **Someone moves out** | Make sure they're all square first (their balances show "—" on the home page). Then go to **Settings → House → Remove** (or **Move out** for yourself). Their old bills stay in the history. |
 | **A bill was entered wrong** | Open it from **Bills**, then click **Edit** or **Delete**. Only the person who added a bill can change, delete or restore it; anyone else can leave a comment on it asking for a fix. Everyone on it is told about changes. |
-| **You want different colours** | **Settings → Theme**: Ledger green, Harbour blue, Plum, Ember or Graphite. Each works in light and dark mode and is saved per device. |
+| **You want different colours** | **Settings → Appearance → Theme** (a dropdown): Ledger green, Harbour blue, Plum, Ember or Graphite. Each works in light and dark mode and is saved per device. |
 | **A bill was deleted by mistake** | **Bills**, scroll to **Recently deleted**, then **Restore**. Works for 90 days. |
 | **You live in more than one house or group** | Tap the house name at the top, then **Add or join another house**. Each house has its own colour (change it in **Settings**), shown as a stripe across the top, so you always know which one you're in. Bills, balances and alerts stay separate per house, and the switcher shows unread alerts for the other houses. |
 | **You want to see where the money goes** | The **Stats** page. **Overview** shows spending by month, by category and who's been paying up front. **Month** lets you pick any month and see its bills, categories and who paid. |
-| **Roommates keep asking where to send money** | Each person adds their e-Transfer email or phone in **Settings → Where roommates should send money**. It then shows up whenever someone pays them back. |
+| **Roommates keep asking where to send money** | Each person adds their e-Transfer email or phone in **Settings → Profile → Where to send you money**. It then shows up whenever someone pays them back. |
 | **A payment was entered wrong** | **Settle up → Payments so far**, then the bin icon next to it. |
 | **Rent or internet repeats every month** | Choose **Repeats: every month** when adding it. To stop it: **Bills → Repeating bills → Stop**. |
-| **You want a copy of everything** | **Settings → Download Excel file.** Doing this every few months is a nice extra backup. |
-| **Someone's invite link leaked** | **Settings → Make a new code.** The old link stops working. |
+| **You want a copy of everything** | **Settings → Your data → Download.** Doing this every few months is a nice extra backup. |
+| **Someone's invite link leaked** | **Settings → House → New code.** The old link stops working. |
 
 ### Putting Hearth on your phone's home screen
 It then opens full-screen like a normal app, with no app store needed.
@@ -114,7 +114,7 @@ It then opens full-screen like a normal app, with no app store needed.
 **Getting help:** in Vercel, the **Logs** tab shows recent errors. Copying the red lines into a message to Claude is usually enough to get a fix.
 
 ### Backups
-Neon keeps automatic restore points, and the free plan covers roughly the last day. To roll the data back, open the Neon dashboard and go to **Branches** (or **Restore**). For a long-term copy, use **Settings → Download Excel file** in Hearth now and then.
+Neon keeps automatic restore points, and the free plan covers roughly the last day. To roll the data back, open the Neon dashboard and go to **Branches** (or **Restore**). For a long-term copy, use **Settings → Your data → Download** in Hearth now and then.
 
 ---
 

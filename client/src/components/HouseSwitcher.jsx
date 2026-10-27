@@ -82,7 +82,7 @@ export default function HouseSwitcher() {
             <Link to="/houses/new" role="menuitem" onClick={() => setOpen(false)}>
               <Plus size={16} /> Add or join another house
             </Link>
-            <Link to="/settings" role="menuitem" onClick={() => setOpen(false)}>
+            <Link to="/settings?s=house" role="menuitem" onClick={() => setOpen(false)}>
               <Cog size={16} /> This house's settings
             </Link>
           </div>
