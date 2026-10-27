@@ -4,8 +4,8 @@ import { ReceiptText, ArrowLeftRight, Bell, Home, Plus, BarChart3 } from 'lucide
 import { useSession } from '../lib/session.jsx';
 import BillForm from './BillForm.jsx';
 import PaymentForm from './PaymentForm.jsx';
-import { Avatar } from './ui.jsx';
 import HouseSwitcher from './HouseSwitcher.jsx';
+import AccountMenu from './AccountMenu.jsx';
 
 const ActionsCtx = createContext(null);
 export const useActions = () => useContext(ActionsCtx);
@@ -64,9 +64,7 @@ export default function Layout() {
               <Bell size={20} strokeWidth={1.75} />
               {unread > 0 && <span className="count">{unread > 9 ? '9+' : unread}</span>}
             </Link>
-            <Link to="/settings" aria-label="Settings and your account" title="Settings">
-              <Avatar user={user} />
-            </Link>
+            <AccountMenu />
           </div>
         </div>
       </header>

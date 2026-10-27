@@ -2644,3 +2644,60 @@ table.ledger {
     padding: 9px 2px;
   }
 }
+
+/* ---------- Account menu (your initials, top right) ---------- */
+.account-switch {
+  position: relative;
+}
+.account-btn {
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.account-btn[aria-expanded='true'] {
+  box-shadow: 0 0 0 2px var(--house);
+}
+.account-menu {
+  left: auto;
+  right: 0;
+  width: min(280px, calc(100vw - 24px));
+}
+.account-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 10px;
+}
+.account-head strong,
+.account-head small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-head small {
+  color: var(--ink-3);
+}
+.signout-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--r);
+  background: transparent;
+  font: inherit;
+  font-weight: 650;
+  color: var(--red);
+  text-align: left;
+  cursor: pointer;
+}
+.signout-item:hover,
+.house-menu-foot a:hover {
+  background: var(--paper);
+}
