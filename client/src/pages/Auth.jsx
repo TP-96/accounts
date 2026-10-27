@@ -1,37 +1,96 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api.js';
 import { useSession } from '../lib/session.jsx';
 import { Logo } from '../components/Layout.jsx';
 import { ErrorNote, ThemeSwitch } from '../components/ui.jsx';
 
+/**
+ * Sign in / create account.
+ * With email set up: an emailed 6-digit code is the main way in; a password is optional and secondary.
+ * Without email (local dev): plain email + password, so nobody gets locked out.
+ */
 export default function Auth() {
-  const { refresh } = useSession();
+  const { refresh, emailEnabled } = useSession();
   const [params] = useSearchParams();
   const invite = params.get('invite') || '';
-  const [mode, setMode] = useState(invite ? 'register' : 'login'); // login | register | forgot
-  const [form, setForm] = useState({ name: '', email: '', password: '', inviteCode: invite });
+  const [mode, setMode] = useState(invite ? 'register' : 'login'); // login | register
+  // start: ask for email · code: type the emailed code · password: secondary sign-in
+  // forgot: ask for email to reset · reset: code + new password
+  const [step, setStep] = useState(emailEnabled ? 'start' : 'password');
+  const [form, setForm] = useState({ name: '', email: '', password: '', inviteCode: invite, code: '', newPassword: '' });
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [wait, setWait] = useState(0); // seconds until another code can be requested
+  const codeBox = useRef(null);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-  const go = (m) => {
+  const go = (st, m = mode) => {
+    setStep(st);
     setMode(m);
     setError(null);
+    setForm((f) => ({ ...f, code: '', newPassword: '' }));
   };
 
-  async function submit(e) {
-    e.preventDefault();
+  useEffect(() => {
+    if (wait <= 0) return undefined;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
+
+  useEffect(() => {
+    if ((step === 'code' || step === 'reset') && codeBox.current) codeBox.current.focus();
+  }, [step]);
+
+  async function run(fn) {
     setBusy(true);
     setError(null);
     try {
-      if (mode === 'login') await api.post('/auth/login', { email: form.email, password: form.password });
-      else await api.post('/auth/register', form);
-      await refresh();
+      await fn();
     } catch (err) {
       setError(err);
-      setBusy(false);
     }
+    setBusy(false);
   }
+
+  const sendCode = () =>
+    run(async () => {
+      await api.post('/auth/code/request', { mode, email: form.email, name: form.name, inviteCode: form.inviteCode });
+      setStep('code');
+      setWait(30);
+    });
+  const verify = (code) =>
+    run(async () => {
+      await api.post('/auth/code/verify', { mode, email: form.email, code });
+      await refresh();
+    });
+  const sendReset = () =>
+    run(async () => {
+      await api.post('/auth/password-reset/request', { email: form.email });
+      setStep('reset');
+      setWait(30);
+    });
+  const confirmReset = () =>
+    run(async () => {
+      await api.post('/auth/password-reset/confirm', { email: form.email, code: form.code, password: form.newPassword });
+      await refresh();
+    });
+  const passwordSignIn = () =>
+    run(async () => {
+      if (mode === 'login' || emailEnabled) await api.post('/auth/login', { email: form.email, password: form.password });
+      else await api.post('/auth/register', form);
+      await refresh();
+    });
+
+  const typeCode = (e) => {
+    const code = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setForm({ ...form, code });
+    if (code.length === 6 && step === 'code' && !busy) verify(code); // submits itself on the 6th digit
+  };
+  const onSubmit = (fn) => (e) => {
+    e.preventDefault();
+    fn();
+  };
+  const resendLabel = wait > 0 ? `Send a new code (${wait}s)` : 'Send a new code';
 
   return (
     <div className="auth">
@@ -72,28 +131,105 @@ export default function Auth() {
 
       <section className="auth-form">
         <div className="auth-card">
-          {mode === 'forgot' ? (
+          {step === 'start' && (
             <>
-              <h2>Forgot your password?</h2>
-              <p className="muted" style={{ margin: '10px 0 18px' }}>
-                Ask any roommate to open <strong>Settings</strong> in Hearth, find your name under Roommates, and tap <strong>Reset password</strong>. They'll
-                get a link to send you. Open it and choose a new password.
-              </p>
-              <p className="faint" style={{ marginBottom: 24 }}>
-                Living alone in Hearth, or no one can help? Whoever set up Hearth for your house can reset it for you (see the owner guide).
-              </p>
-              <button className="btn btn-block" onClick={() => go('login')}>
-                Back to sign in
-              </button>
-            </>
-          ) : (
-            <>
-              <h2>{mode === 'login' ? 'Sign in' : 'Create your account'}</h2>
+              <div className="segmented auth-tabs" role="group" aria-label="Sign in or create an account">
+                <button type="button" aria-pressed={mode === 'login'} onClick={() => go('start', 'login')}>
+                  Sign in
+                </button>
+                <button type="button" aria-pressed={mode === 'register'} onClick={() => go('start', 'register')}>
+                  Create account
+                </button>
+              </div>
+              <h2>{mode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
               <p className="muted" style={{ marginBottom: 24 }}>
-                {mode === 'login' ? 'Welcome back.' : invite ? "You've been invited to a house. Takes about 20 seconds." : 'Takes about 20 seconds.'}
+                {mode === 'login'
+                  ? "We'll email you a 6-digit code. No password needed."
+                  : invite
+                    ? "You've been invited to a house. We'll email a code to confirm it's you."
+                    : "Takes about 20 seconds. We'll email a code to confirm it's you."}
               </p>
-              <form className="form-grid" onSubmit={submit}>
+              <form className="form-grid" onSubmit={onSubmit(sendCode)}>
                 {mode === 'register' && (
+                  <label className="field">
+                    <span>Your first name</span>
+                    <input className="input" autoComplete="given-name" value={form.name} onChange={set('name')} required maxLength={40} />
+                  </label>
+                )}
+                <label className="field">
+                  <span>Email</span>
+                  <input className="input" type="email" autoComplete="email" inputMode="email" value={form.email} onChange={set('email')} required autoFocus={mode === 'login'} />
+                </label>
+                {mode === 'register' && (
+                  <label className="field">
+                    <span>House invite code (if you have one)</span>
+                    <input className="input" value={form.inviteCode} onChange={set('inviteCode')} placeholder="e.g. 7F3A9C21" style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }} />
+                  </label>
+                )}
+                <ErrorNote error={error} />
+                <button className="btn btn-primary btn-block" disabled={busy}>
+                  {busy ? 'Sending…' : 'Email me a code'}
+                </button>
+              </form>
+              {mode === 'login' && (
+                <p className="auth-alt">
+                  <button type="button" className="btn-link" onClick={() => go('password')}>
+                    Use a password instead
+                  </button>
+                </p>
+              )}
+            </>
+          )}
+
+          {step === 'code' && (
+            <>
+              <h2>Check your email</h2>
+              <p className="muted" style={{ marginBottom: 24 }}>
+                We sent a 6-digit code to <strong>{form.email}</strong>. It works for 10 minutes.
+              </p>
+              <form className="form-grid" onSubmit={onSubmit(() => verify(form.code))}>
+                <label className="field">
+                  <span>Your code</span>
+                  <input
+                    ref={codeBox}
+                    className="input code-input"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={form.code}
+                    onChange={typeCode}
+                    aria-label="6-digit code"
+                  />
+                </label>
+                <ErrorNote error={error} />
+                <button className="btn btn-primary btn-block" disabled={busy || form.code.length !== 6}>
+                  {busy ? 'Checking…' : mode === 'register' ? 'Create my account' : 'Sign in'}
+                </button>
+              </form>
+              <p className="auth-alt">
+                <button type="button" className="btn-link" disabled={wait > 0 || busy} onClick={sendCode}>
+                  {resendLabel}
+                </button>
+                <button type="button" className="btn-link" onClick={() => go('start')}>
+                  Use a different email
+                </button>
+              </p>
+              <p className="faint" style={{ marginTop: 14 }}>
+                Nothing yet? Check your spam folder. It can take a minute.
+              </p>
+            </>
+          )}
+
+          {step === 'password' && (
+            <>
+              <h2>{emailEnabled ? 'Sign in with a password' : mode === 'login' ? 'Sign in' : 'Create your account'}</h2>
+              <p className="muted" style={{ marginBottom: 24 }}>
+                {emailEnabled ? 'If you set a password in Settings, you can use it here.' : mode === 'login' ? 'Welcome back.' : 'Takes about 20 seconds.'}
+              </p>
+              <form className="form-grid" onSubmit={onSubmit(passwordSignIn)}>
+                {!emailEnabled && mode === 'register' && (
                   <label className="field">
                     <span>Your first name</span>
                     <input className="input" autoComplete="given-name" value={form.name} onChange={set('name')} required maxLength={40} />
@@ -104,7 +240,7 @@ export default function Auth() {
                   <input className="input" type="email" autoComplete="email" inputMode="email" value={form.email} onChange={set('email')} required />
                 </label>
                 <label className="field">
-                  <span>{mode === 'register' ? 'Password (8+ characters)' : 'Password'}</span>
+                  <span>{!emailEnabled && mode === 'register' ? 'Password (8+ characters)' : 'Password'}</span>
                   <input
                     className="input"
                     type="password"
@@ -112,10 +248,10 @@ export default function Auth() {
                     value={form.password}
                     onChange={set('password')}
                     required
-                    minLength={mode === 'register' ? 8 : undefined}
+                    minLength={!emailEnabled && mode === 'register' ? 8 : undefined}
                   />
                 </label>
-                {mode === 'register' && (
+                {!emailEnabled && mode === 'register' && (
                   <label className="field">
                     <span>House invite code (if you have one)</span>
                     <input className="input" value={form.inviteCode} onChange={set('inviteCode')} placeholder="e.g. 7F3A9C21" style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }} />
@@ -126,19 +262,97 @@ export default function Auth() {
                   {busy ? 'One moment…' : mode === 'login' ? 'Sign in' : 'Create account'}
                 </button>
               </form>
-              <div style={{ marginTop: 22, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <span className="muted">
-                  {mode === 'login' ? 'New here? ' : 'Have an account? '}
-                  <button type="button" className="btn-link" onClick={() => go(mode === 'login' ? 'register' : 'login')}>
-                    {mode === 'login' ? 'Create an account' : 'Sign in'}
-                  </button>
-                </span>
-                {mode === 'login' && (
-                  <button type="button" className="btn-link" onClick={() => go('forgot')}>
-                    Forgot password?
+              <p className="auth-alt">
+                {emailEnabled ? (
+                  <>
+                    <button type="button" className="btn-link" onClick={() => go('start', 'login')}>
+                      Email me a code instead
+                    </button>
+                    <button type="button" className="btn-link" onClick={() => go('forgot')}>
+                      Forgot password?
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" className="btn-link" onClick={() => go('password', mode === 'login' ? 'register' : 'login')}>
+                    {mode === 'login' ? 'New here? Create an account' : 'Have an account? Sign in'}
                   </button>
                 )}
-              </div>
+              </p>
+              {!emailEnabled && mode === 'login' && (
+                <p className="faint" style={{ marginTop: 14 }}>
+                  Forgot your password? Ask a roommate to make you a reset link in Settings.
+                </p>
+              )}
+            </>
+          )}
+
+          {step === 'forgot' && (
+            <>
+              <h2>Forgot your password?</h2>
+              <p className="muted" style={{ marginBottom: 24 }}>
+                Enter your email and we'll send a code so you can choose a new one. (Or skip the password and{' '}
+                <button type="button" className="btn-link" onClick={() => go('start', 'login')}>
+                  sign in with a code
+                </button>
+                .)
+              </p>
+              <form className="form-grid" onSubmit={onSubmit(sendReset)}>
+                <label className="field">
+                  <span>Email</span>
+                  <input className="input" type="email" autoComplete="email" inputMode="email" value={form.email} onChange={set('email')} required autoFocus />
+                </label>
+                <ErrorNote error={error} />
+                <button className="btn btn-primary btn-block" disabled={busy}>
+                  {busy ? 'Sending…' : 'Email me a code'}
+                </button>
+              </form>
+              <p className="auth-alt">
+                <button type="button" className="btn-link" onClick={() => go('password')}>
+                  Back to sign in
+                </button>
+              </p>
+            </>
+          )}
+
+          {step === 'reset' && (
+            <>
+              <h2>Choose a new password</h2>
+              <p className="muted" style={{ marginBottom: 24 }}>
+                If <strong>{form.email}</strong> has an account, we sent it a 6-digit code. Enter it below with your new password.
+              </p>
+              <form className="form-grid" onSubmit={onSubmit(confirmReset)}>
+                <label className="field">
+                  <span>Your code</span>
+                  <input
+                    ref={codeBox}
+                    className="input code-input"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={form.code}
+                    onChange={(e) => setForm({ ...form, code: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                    aria-label="6-digit code"
+                  />
+                </label>
+                <label className="field">
+                  <span>New password (8+ characters)</span>
+                  <input className="input" type="password" autoComplete="new-password" minLength={8} value={form.newPassword} onChange={set('newPassword')} />
+                </label>
+                <ErrorNote error={error} />
+                <button className="btn btn-primary btn-block" disabled={busy || form.code.length !== 6 || form.newPassword.length < 8}>
+                  {busy ? 'Saving…' : 'Save password and sign in'}
+                </button>
+              </form>
+              <p className="auth-alt">
+                <button type="button" className="btn-link" disabled={wait > 0 || busy} onClick={sendReset}>
+                  {resendLabel}
+                </button>
+                <button type="button" className="btn-link" onClick={() => go('password')}>
+                  Back to sign in
+                </button>
+              </p>
             </>
           )}
         </div>

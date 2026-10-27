@@ -47,7 +47,7 @@ export function clearSession(res) {
  * One-time password reset link token, made by a roommate. It embeds a fingerprint of
  * the current password hash, so it stops working the moment the password changes.
  */
-const fingerprint = (hash) => crypto.createHash('sha256').update(hash).digest('hex').slice(0, 16);
+const fingerprint = (hash) => crypto.createHash('sha256').update(hash || '').digest('hex').slice(0, 16);
 export const resetToken = (user) => jwt.sign({ uid: user.id, purpose: 'reset', fp: fingerprint(user.password_hash) }, SECRET, { expiresIn: '3d' });
 export function verifyResetToken(token, user) {
   try {
@@ -77,6 +77,7 @@ export function publicUser(u) {
     email: u.email,
     color: u.color,
     householdId: u.household_id,
+    hasPassword: !!u.password_hash,
     emailNotifications: !!u.email_notifications,
     etransfer: u.etransfer || '',
   };

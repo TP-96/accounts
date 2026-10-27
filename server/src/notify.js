@@ -10,6 +10,9 @@ if (process.env.SMTP_HOST) {
     auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
   });
 }
+// Tests: collect outgoing mail in memory instead of sending it.
+if (process.env.MAIL_TEST === '1' && !transport) transport = nodemailer.createTransport({ jsonTransport: true });
+export const mailbox = [];
 const FROM = process.env.MAIL_FROM || 'Hearth <no-reply@hearth.local>';
 export const APP_URL =
   process.env.APP_URL ||
@@ -43,6 +46,17 @@ export async function notify(userIds, { type, title, body = '', link = null }) {
       return Promise.race([send, timeout]).catch((err) => console.error('[email] failed for', r.email, err.message));
     })
   );
+}
+
+/** Send one email now (awaited, because serverless functions freeze after responding). Throws on failure. */
+export async function sendMail({ to, subject, text, html }, timeoutMs = 8000) {
+  if (!transport) throw new Error('email is not set up');
+  if (process.env.MAIL_TEST === '1') {
+    mailbox.push({ to, subject, text });
+    if (process.env.NODE_ENV !== 'test') console.log(`[mail:test] to=${to} subject="${subject}"`); // so a developer can read the code
+  }
+  const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timed out')), timeoutMs));
+  await Promise.race([transport.sendMail({ from: FROM, to, subject, text, html }), timeout]);
 }
 
 export async function logActivity(householdId, userId, action, summary) {

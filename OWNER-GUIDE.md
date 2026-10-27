@@ -49,21 +49,25 @@ That's it. Bookmark the Vercel project page; it's your control panel.
 ### Optional: a nicer web address
 In Vercel, go to **Settings**, then **Domains**, to use an address you own, for example `hearth.yourname.ca` (domains cost about $15/year from any registrar). Vercel walks you through it.
 
-### Optional: email notifications
-Without this, notifications still appear inside Hearth (the bell). To also send emails:
+### Email (sign-in codes and notifications)
+Once email is set up, everyone signs in and creates accounts with a **6-digit code emailed to them**. Passwords become optional, and forgotten passwords are reset by email. The same email account also sends the bill, payment and reminder emails. Without it, Hearth falls back to plain email and password sign-in, and notifications appear only inside the app (the bell).
 
-1. In your Google account, turn on 2-Step Verification. Then search for **App passwords** and create one called "Hearth".
+1. In the Google account Hearth will send from, turn on 2-Step Verification. Then go to **myaccount.google.com/apppasswords** and create an app password called "Hearth".
 2. In Vercel, go to **Settings**, then **Environment Variables**, and add each name and value below:
 
    | Name | Value |
    |---|---|
    | `SMTP_HOST` | `smtp.gmail.com` |
    | `SMTP_PORT` | `587` |
-   | `SMTP_USER` | your Gmail address |
-   | `SMTP_PASS` | the 16-letter app password |
-   | `MAIL_FROM` | `Hearth <your Gmail address>` |
+   | `SMTP_USER` | the Gmail address |
+   | `SMTP_PASS` | the 16-letter app password (mark it **Secret**) |
+   | `MAIL_FROM` | `Hearth <the Gmail address>` |
 
-3. Redeploy (open **Deployments**, click **⋯**, then **Redeploy**).
+3. Redeploy (open **Deployments**, click **⋯**, then **Redeploy**). Vercel may ask for an emailed code to confirm it's you.
+
+**Check it works:** open the site in a private window, choose **Sign in**, enter your email and click **Email me a code**. The email usually arrives within seconds (check spam the first time).
+
+**Good to know:** codes work for 10 minutes and once only, wrong guesses are limited, and one address can ask for at most 6 codes an hour. Gmail lets an ordinary account send about 500 emails a day, which is far more than a house needs.
 
 ---
 
@@ -72,7 +76,7 @@ Without this, notifications still appear inside Hearth (the bell). To also send 
 | Situation | What to do |
 |---|---|
 | **A new roommate moves in** | **Settings → Copy invite link**, then send it to them. |
-| **Someone forgot their password** | Anyone in the house: **Settings → Roommates → Reset password** next to their name, then send them the link. It works once and expires after 3 days. |
+| **Someone forgot their password** | They don't need a password at all: **Sign in → Email me a code**. To choose a new one, use **Use a password instead → Forgot password?**, which emails a code. If email isn't working, a roommate can make a one-time link under **Settings → Roommates → Reset password**. It works once and expires after 3 days. |
 | **Someone moves out** | Make sure they're all square first (their balances show "—" on the home page). Then go to **Settings → Roommates → Remove** (or **Move out** for yourself). Their old bills stay in the history. |
 | **A bill was entered wrong** | Open it from **Bills**, then click **Edit** or **Delete**. Everyone on it is told. |
 | **A bill was deleted by mistake** | **Bills**, scroll to **Recently deleted**, then **Restore**. Works for 90 days. |
@@ -102,7 +106,7 @@ It then opens full-screen like a normal app, with no app store needed.
 | *"Can't reach Hearth"* (in the app) | The phone has no internet, or Vercel is down. Check **vercel-status.com**. |
 | The site is blank or broken after a change | Roll back (see Rule one), then ask whoever made the change to fix it. |
 | Repeating bills didn't appear | They're created each morning, and also whenever someone opens the home page. Give it a day. If it still hasn't happened, check the bill under **Bills → Repeating bills**: if it's missing, it was paused because someone on it moved out, so add it again. |
-| Emails stopped arriving | The Gmail app password was probably revoked. Make a new one and update `SMTP_PASS` in Vercel, then redeploy. |
+| Emails (and sign-in codes) stopped arriving | The Gmail app password was probably revoked. Make a new one and update `SMTP_PASS` in Vercel, then redeploy. Until then, anyone who added a password in **Settings** can sign in with it (**Use a password instead**), and a roommate can make a reset link for anyone else. |
 | Everyone in the house is locked out | Rare. Ask the person (or Claude) who maintains the code to make a reset link from the database. |
 
 **Getting help:** in Vercel, the **Logs** tab shows recent errors. Copying the red lines into a message to Claude is usually enough to get a fix.
@@ -128,5 +132,5 @@ Ask Claude for the change, for example "add a category for pets". The code gets 
 
 ## 6. Please don't…
 - **Delete the Neon database or the Vercel Storage connection.** That deletes the house's records.
-- **Share reset links anywhere except with the person they're for.**
+- **Share reset links or sign-in codes with anyone.** A code is the key to that person's account.
 - **Rename or delete the GitHub repository** without reconnecting it in Vercel afterwards.

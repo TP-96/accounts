@@ -8,7 +8,7 @@ import { notify, logActivity, emailEnabled } from '../notify.js';
 
 const r = Router();
 // Ink tones that read on the ledger-paper background (kept in sync with client INK_COLORS).
-const COLORS = ['#3b5b92', '#9a3d63', '#2f7a55', '#9a6a1c', '#2b7f8f', '#6a4c93', '#a8452d', '#5a6b2e'];
+export const COLORS = ['#3b5b92', '#9a3d63', '#2f7a55', '#9a6a1c', '#2b7f8f', '#6a4c93', '#a8452d', '#5a6b2e'];
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Best-effort in-memory rate limit (per server instance) for auth endpoints.
@@ -27,6 +27,8 @@ r.post('/auth/register', async (req, res) => {
   const name = String(req.body.name || '').trim();
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
+  // With email set up, new accounts are made with an emailed code (see routes/codes.js) so every address is verified.
+  if (emailEnabled()) return res.status(400).json({ error: 'Create your account with the email code option' });
   if (limited(`reg:${req.ip}`)) return res.status(429).json({ error: 'Too many attempts — try again in a few minutes' });
   if (!name || name.length > 40) return res.status(400).json({ error: 'Enter your name (up to 40 characters)' });
   if (!emailRe.test(email)) return res.status(400).json({ error: 'Enter a valid email' });
@@ -52,7 +54,7 @@ r.post('/auth/login', async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   if (limited(`login:${req.ip}:${email}`)) return res.status(429).json({ error: 'Too many attempts — try again in a few minutes' });
   const user = await q.get('SELECT * FROM users WHERE email = ?', email);
-  const ok = user && (await bcrypt.compare(String(req.body.password || ''), user.password_hash));
+  const ok = user && user.password_hash && (await bcrypt.compare(String(req.body.password || ''), user.password_hash));
   if (!ok) return res.status(401).json({ error: 'Email or password is incorrect' });
   const token = setSession(res, user.id);
   res.json({ user: publicUser(user), token });
@@ -64,7 +66,7 @@ r.post('/auth/logout', (_req, res) => {
 });
 
 r.get('/me', async (req, res) => {
-  if (!req.user) return res.json({ user: null, household: null });
+  if (!req.user) return res.json({ user: null, household: null, emailEnabled: emailEnabled() });
   res.json({ user: publicUser(req.user), household: await householdPayload(req.user.household_id), emailEnabled: emailEnabled() });
 });
 
@@ -75,7 +77,8 @@ r.patch('/me', requireUser, async (req, res) => {
   let hash = u.password_hash;
   if (req.body.newPassword) {
     if (String(req.body.newPassword).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
-    if (!(await bcrypt.compare(String(req.body.currentPassword || ''), u.password_hash)))
+    // Accounts made with an emailed code have no password yet, so they can add one without a "current" one.
+    if (u.password_hash && !(await bcrypt.compare(String(req.body.currentPassword || ''), u.password_hash)))
       return res.status(400).json({ error: 'Current password is incorrect' });
     hash = await bcrypt.hash(String(req.body.newPassword), 10);
   }
@@ -163,7 +166,7 @@ async function householdPayload(id) {
   return { id: h.id, name: h.name, inviteCode: h.invite_code, currency: h.currency, members, formerMembers };
 }
 
-async function joinHousehold(user, code) {
+export async function joinHousehold(user, code) {
   const h = await q.get('SELECT * FROM households WHERE invite_code = ?', code.trim().toUpperCase());
   if (!h) return null;
   const others = (await q.all('SELECT id FROM users WHERE household_id = ?', h.id)).map((m) => m.id);

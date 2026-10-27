@@ -1773,3 +1773,38 @@ table.ledger {
     display: none;
   }
 }
+
+/* ---------- Email-code sign-in ---------- */
+.auth-tabs {
+  display: flex;
+  width: 100%;
+  margin-bottom: 26px;
+}
+.auth-tabs button {
+  flex: 1;
+  padding: 10px 14px;
+}
+.auth-alt {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.btn-link:disabled {
+  color: var(--ink-3);
+  cursor: default;
+  text-decoration: none;
+}
+.code-input {
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-align: center;
+  padding: 14px 8px 14px calc(8px + 0.4em);
+  font-variant-numeric: tabular-nums;
+}
+.code-input::placeholder {
+  color: var(--ink-3);
+  opacity: 0.5;
+}

@@ -6,7 +6,12 @@ Bill splitting for roommates, a less janky Splitwise: unlimited bills, no ads, n
 - **Thinking about the app stores?** Read **[MOBILE.md](MOBILE.md)**.
 
 ## What it does
-- **Accounts:** one account per roommate. Join a house with an invite link. A roommate can make a password-reset link for you, and settled-up roommates can move out.
+- **Accounts:**
+  - one account per roommate, and you join a house with an invite link
+  - sign in and sign up with a 6-digit code emailed to you (no password needed), so every address is verified
+  - a password is optional and secondary; forgotten passwords are reset by an emailed code
+  - without email set up it falls back to email and password, and a roommate can make a one-time reset link
+  - settled-up roommates can move out
 - **Bills:**
   - each bill has a name, description, category, date and who paid
   - split equally, by amount, by percentage, or by shares (e.g. 2 shares for a couple), always exact to the cent
@@ -19,7 +24,7 @@ Bill splitting for roommates, a less janky Splitwise: unlimited bills, no ads, n
   - anything filled in automatically is highlighted for checking
 - **Notifications:**
   - in-app for every bill, payment, edit and reminder
-  - also by email if SMTP is set up
+  - also by email if SMTP is set up (the same email setup sends the sign-in codes)
 - **Payments:**
   - "I paid" on a bill, or record any payment
   - balances update instantly
@@ -62,6 +67,7 @@ server/src/
   routes/extras.js     stats, comments, restoring deleted bills
   money.js             split maths in integer cents
   balances.js          pairwise balances, debt simplification, ledger
+  routes/codes.js      emailed sign-in / sign-up / password-reset codes
   bills.js recurring.js export.js notify.js auth.js routes/
 client/src/
   pages/ components/   React UI

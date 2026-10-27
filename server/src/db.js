@@ -141,6 +141,24 @@ const MIGRATIONS = [
      CREATE INDEX IF NOT EXISTS idx_bill_comments_bill ON bill_comments(bill_id, id);
      ALTER TABLE users ADD COLUMN IF NOT EXISTS etransfer TEXT NOT NULL DEFAULT ''`,
   ],
+  [
+    4,
+    // Sign in with a code emailed to you (passwords become optional), and password resets by email.
+    `CREATE TABLE IF NOT EXISTS login_codes (
+       id SERIAL PRIMARY KEY,
+       email TEXT NOT NULL,
+       purpose TEXT NOT NULL CHECK (purpose IN ('login','register','reset')),
+       salt TEXT NOT NULL,
+       code_hash TEXT NOT NULL,
+       payload TEXT NOT NULL DEFAULT '{}',
+       attempts INTEGER NOT NULL DEFAULT 0,
+       used INTEGER NOT NULL DEFAULT 0,
+       expires_at TEXT NOT NULL,
+       created_at TEXT NOT NULL
+     );
+     CREATE INDEX IF NOT EXISTS idx_login_codes_email ON login_codes(email, id);
+     ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL`,
+  ],
 ];
 
 /** "a = ? AND b = ?" -> "a = $1 AND b = $2" (skips ? inside quoted strings). */

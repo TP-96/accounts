@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { q, init } from './db.js';
 import { loadUser, requireUser, requireHousehold, downloadToken } from './auth.js';
 import accountRoutes from './routes/account.js';
+import codeRoutes from './routes/codes.js';
 import moneyRoutes from './routes/money.js';
 import extraRoutes from './routes/extras.js';
 import { runRecurring } from './recurring.js';
@@ -78,6 +79,7 @@ api.get('/cron/recurring', async (req, res) => {
 });
 
 api.use(accountRoutes);
+api.use(codeRoutes);
 
 api.get('/notifications', requireUser, async (req, res) => {
   const rows = await q.all('SELECT * FROM notifications WHERE user_id = ? ORDER BY id DESC LIMIT 100', req.user.id);

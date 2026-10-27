@@ -240,20 +240,27 @@ export default function Settings() {
               className="form-grid"
               onSubmit={async (e) => {
                 e.preventDefault();
-                if (await save(pw, 'Password changed')) setPw({ currentPassword: '', newPassword: '' });
+                if (await save(pw, user.hasPassword ? 'Password changed' : 'Password added')) setPw({ currentPassword: '', newPassword: '' });
               }}
             >
-              <h2>Change your password</h2>
+              <h2>{user.hasPassword ? 'Change your password' : 'Add a password (optional)'}</h2>
+              <p className="faint" style={{ marginTop: -6 }}>
+                {user.hasPassword
+                  ? 'You can always sign in with a code emailed to you instead.'
+                  : 'You sign in with a code emailed to you, so a password is optional. Add one if you also want to sign in with it.'}
+              </p>
+              {user.hasPassword && (
+                <label className="field">
+                  <span>Current password</span>
+                  <input className="input" type="password" autoComplete="current-password" value={pw.currentPassword} onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })} />
+                </label>
+              )}
               <label className="field">
-                <span>Current password</span>
-                <input className="input" type="password" autoComplete="current-password" value={pw.currentPassword} onChange={(e) => setPw({ ...pw, currentPassword: e.target.value })} />
-              </label>
-              <label className="field">
-                <span>New password (8+ characters)</span>
+                <span>{user.hasPassword ? 'New password (8+ characters)' : 'Password (8+ characters)'}</span>
                 <input className="input" type="password" autoComplete="new-password" minLength={8} value={pw.newPassword} onChange={(e) => setPw({ ...pw, newPassword: e.target.value })} />
               </label>
-              <button className="btn" style={{ justifySelf: 'start' }} disabled={!pw.currentPassword || pw.newPassword.length < 8}>
-                Change password
+              <button className="btn" style={{ justifySelf: 'start' }} disabled={(user.hasPassword && !pw.currentPassword) || pw.newPassword.length < 8}>
+                {user.hasPassword ? 'Change password' : 'Save password'}
               </button>
             </form>
           </section>
