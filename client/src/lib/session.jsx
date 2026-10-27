@@ -88,6 +88,7 @@ export function SessionProvider({ children }) {
       unread,
       setUnread,
       toast,
+      isAdmin: state.household?.members.find((m) => m.id === state.user?.id)?.role === 'admin',
       memberById: (id) => state.household?.members.find((m) => m.id === id) || state.household?.formerMembers?.find((m) => m.id === id),
     }),
     [state, refresh, switchHouse, version, unread, toast]

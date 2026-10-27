@@ -183,6 +183,19 @@ const MIGRATIONS = [
        SELECT m.household_id AS household_id, u.id, u.name, u.color
          FROM household_members m JOIN users u ON u.id = m.user_id WHERE m.left_at IS NOT NULL`,
   ],
+  [
+    6,
+    // House admins: can edit or delete any bill, remove roommates and manage the house's settings.
+    // Each existing house's first member (the person who created it) becomes its admin.
+    `ALTER TABLE household_members ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'member';
+     UPDATE household_members m SET role = 'admin'
+      WHERE m.left_at IS NULL AND NOT EXISTS (
+        SELECT 1 FROM household_members o WHERE o.household_id = m.household_id AND o.left_at IS NULL
+           AND (o.joined_at < m.joined_at OR (o.joined_at = m.joined_at AND o.user_id < m.user_id)));
+     CREATE OR REPLACE VIEW active_members AS
+       SELECT m.household_id AS household_id, u.id, u.name, u.email, u.color, u.etransfer, m.role
+         FROM household_members m JOIN users u ON u.id = m.user_id WHERE m.left_at IS NULL`,
+  ],
 ];
 
 /** "a = ? AND b = ?" -> "a = $1 AND b = $2" (skips ? inside quoted strings). */

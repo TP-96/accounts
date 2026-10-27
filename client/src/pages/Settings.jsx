@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Bell, Copy, Database, Download, Home, KeyRound, LogOut, Palette, RefreshCw, User, UserMinus } from 'lucide-react';
+import { Bell, Copy, Database, Download, Home, KeyRound, LogOut, Palette, RefreshCw, Shield, ShieldOff, User, UserMinus } from 'lucide-react';
 import { api, downloadExport } from '../lib/api.js';
 import { PUBLIC_URL } from '../lib/platform.js';
 import { useSession, usePalette, PALETTES } from '../lib/session.jsx';
@@ -161,7 +161,17 @@ function Profile() {
 
 /* ---------------- House ---------------- */
 function HouseSettings() {
-  const { user, household, refresh, toast, bump } = useSession();
+  const { user, household, refresh, toast, bump, isAdmin } = useSession();
+  const adminCount = household.members.filter((m) => m.role === 'admin').length;
+  const setRole = async (m, role) => {
+    try {
+      await api.post(`/household/members/${m.id}/role`, { role });
+      await refresh();
+      toast(role === 'admin' ? `${m.name} is now an admin` : m.id === user.id ? "You're no longer an admin" : `${m.name} is no longer an admin`);
+    } catch (e) {
+      toast(e.message);
+    }
+  };
   const [houseName, setHouseName] = useState(household.name);
   const [removing, setRemoving] = useState(null);
   const [removeError, setRemoveError] = useState(null);
@@ -190,21 +200,51 @@ function HouseSettings() {
 
       <div className="set-group">Roommates ({household.members.length})</div>
       <ul className="rows" style={{ marginBottom: 8 }}>
-        {household.members.map((m) => (
-          <li key={m.id} className="row with-avatar">
-            <Avatar user={m} />
-            <span className="row-main">
-              <span className="row-title">{m.id === user.id ? `${m.name} (you)` : m.name}</span>
-              <span className="row-meta">{m.email}</span>
-            </span>
-            <span className="row-end">
-              <button className="btn btn-sm btn-ghost" onClick={() => { setRemoveError(null); setRemoving(m); }} title={m.id === user.id ? 'Move out' : `Remove ${m.name}`}>
-                <UserMinus size={15} /> <span className="hide-xs">{m.id === user.id ? 'Move out' : 'Remove'}</span>
-              </button>
-            </span>
-          </li>
-        ))}
+        {household.members.map((m) => {
+          const me = m.id === user.id;
+          const admin = m.role === 'admin';
+          return (
+            <li key={m.id} className="row with-avatar member-row">
+              <Avatar user={m} />
+              <span className="row-main">
+                <span className="row-title">
+                  {me ? `${m.name} (you)` : m.name}
+                  {admin && <span className="role-tag">Admin</span>}
+                </span>
+                <span className="row-meta">{m.email}</span>
+              </span>
+              <span className="row-end member-actions">
+                {isAdmin && (!me || adminCount > 1) && (
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => setRole(m, admin ? 'member' : 'admin')}
+                    title={admin ? (me ? 'Step down as admin' : `Remove ${m.name} as admin`) : `Make ${m.name} an admin`}
+                    aria-label={admin ? (me ? 'Step down as admin' : `Remove ${m.name} as admin`) : `Make ${m.name} an admin`}
+                  >
+                    {admin ? <ShieldOff size={15} /> : <Shield size={15} />}{' '}
+                    <span className="hide-xs">{admin ? (me ? 'Step down' : 'Remove admin') : 'Make admin'}</span>
+                  </button>
+                )}
+                {(me || isAdmin) && (
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => { setRemoveError(null); setRemoving(m); }}
+                    title={me ? 'Move out' : `Remove ${m.name}`}
+                    aria-label={me ? 'Move out' : `Remove ${m.name}`}
+                  >
+                    <UserMinus size={15} /> <span className="hide-xs">{me ? 'Move out' : 'Remove'}</span>
+                  </button>
+                )}
+              </span>
+            </li>
+          );
+        })}
       </ul>
+      <p className="faint admin-note">
+        {isAdmin
+          ? "As an admin you can fix anyone's bills, remove roommates and change the house's name, colour and invite code."
+          : `Admins (${household.members.filter((m) => m.role === 'admin').map((m) => m.name).join(', ')}) can fix anyone's bills, remove roommates and change the house's settings.`}
+      </p>
 
       <div className="set-group">Invite</div>
       <Row title="Invite a roommate" hint="Send them this link. They sign up and land in this house." stack>
@@ -216,6 +256,7 @@ function HouseSettings() {
           <span className="link-text">{inviteLink}</span>
         </div>
       </Row>
+      {isAdmin && (
       <Row title="Invite link leaked?" hint="Makes a new code. The old link stops working.">
         <button
           className="btn btn-sm"
@@ -228,8 +269,10 @@ function HouseSettings() {
           <RefreshCw size={15} /> New code
         </button>
       </Row>
+      )}
 
       <div className="set-group">Look</div>
+      {!isAdmin && <p className="faint admin-note">Only an admin can change these.</p>}
       <form
         onSubmit={async (e) => {
           e.preventDefault();
@@ -240,8 +283,8 @@ function HouseSettings() {
       >
         <Row title="House name">
           <span className="inline-field">
-            <input className="input" value={houseName} onChange={(e) => setHouseName(e.target.value)} maxLength={60} aria-label="House name" />
-            <button className="btn" disabled={!houseName.trim() || houseName.trim() === household.name}>
+            <input className="input" value={houseName} onChange={(e) => setHouseName(e.target.value)} maxLength={60} aria-label="House name" disabled={!isAdmin} />
+            <button className="btn" disabled={!isAdmin || !houseName.trim() || houseName.trim() === household.name}>
               Rename
             </button>
           </span>
@@ -257,6 +300,7 @@ function HouseSettings() {
               style={{ background: c }}
               aria-pressed={household.color === c}
               aria-label={`Use this colour for ${household.name}`}
+              disabled={!isAdmin}
               onClick={async () => {
                 await api.patch('/household', { color: c });
                 await refresh();

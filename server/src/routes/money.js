@@ -6,6 +6,7 @@ import { toCents, fmt, ValidationError } from '../money.js';
 import { notify, logActivity } from '../notify.js';
 import { balancesFor, householdNets, simplifyDebts, ledgerFor } from '../balances.js';
 import { advanceDate, runRecurringThrottled } from '../recurring.js';
+import { isAdmin } from './account.js';
 
 const r = Router();
 r.use(requireHousehold);
@@ -65,11 +66,12 @@ r.post('/bills', async (req, res) => {
   res.status(201).json({ bill: await getBill(hid(req), id) });
 });
 
-/** Only the person who added a bill may edit, delete or restore it. Sends a 403 and returns true otherwise. */
+/** Only the person who added a bill, or a house admin, may edit, delete or restore it. Sends a 403 and returns true otherwise. */
 export async function notCreator(req, res, createdBy, verb) {
   if (createdBy === req.user.id) return false;
+  if (await isAdmin(req.user.household_id, req.user.id)) return false;
   const who = await q.get('SELECT name FROM users WHERE id = ?', createdBy);
-  res.status(403).json({ error: `Only ${who?.name || 'the person who added this bill'} can ${verb} it, because they added it. Leave a comment on the bill to ask for a change.` });
+  res.status(403).json({ error: `Only ${who?.name || 'the person who added this bill'} (who added it) or a house admin can ${verb} it. Leave a comment on the bill to ask for a change.` });
   return true;
 }
 

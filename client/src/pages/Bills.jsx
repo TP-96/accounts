@@ -8,7 +8,7 @@ import { useActions } from '../components/Layout.jsx';
 import { CategoryTag, Loading } from '../components/ui.jsx';
 
 export default function Bills() {
-  const { user, memberById, toast, bump } = useSession();
+  const { user, memberById, toast, bump, isAdmin } = useSession();
   const actions = useActions();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
@@ -179,12 +179,12 @@ export default function Bills() {
                   </span>
                   <span className="row-end">
                     <span className="row-amt">{money(b.amountCents)}</span>
-                    {b.createdBy === user.id ? (
+                    {b.createdBy === user.id || isAdmin ? (
                       <button className="btn btn-sm" onClick={() => restore(b)}>
                         Restore
                       </button>
                     ) : (
-                      <span className="faint" style={{ fontSize: '0.8rem' }}>Only {memberById(b.createdBy)?.name || 'whoever added it'} can restore</span>
+                      <span className="faint" style={{ fontSize: '0.8rem' }}>Only {memberById(b.createdBy)?.name || 'whoever added it'} or an admin can restore</span>
                     )}
                   </span>
                 </li>

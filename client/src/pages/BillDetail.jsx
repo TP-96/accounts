@@ -12,7 +12,7 @@ const SPLIT_LABEL = { equal: 'Split equally', exact: 'Split by amount', percent:
 export default function BillDetail() {
   const { id } = useParams();
   const nav = useNavigate();
-  const { user, memberById, toast, bump } = useSession();
+  const { user, memberById, toast, bump, isAdmin } = useSession();
   const actions = useActions();
   const { data, error } = useData(`/bills/${id}`);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -72,7 +72,7 @@ export default function BillDetail() {
             )}
           </p>
         </div>
-        {b.createdBy === user.id ? (
+        {b.createdBy === user.id || isAdmin ? (
           <div className="inline-actions">
             <button className="btn btn-sm" onClick={() => actions.editBill(b)}>
               <Pencil size={15} /> Edit
@@ -83,7 +83,7 @@ export default function BillDetail() {
           </div>
         ) : (
           <p className="faint" style={{ maxWidth: '26ch', fontSize: '0.875rem', margin: 0 }}>
-            Only {creator?.name || 'the person who added it'} can edit or delete this bill. Leave a comment below to ask for a change.
+            Only {creator?.name || 'the person who added it'} or a house admin can edit or delete this bill. Leave a comment below to ask for a change.
           </p>
         )}
       </div>

@@ -90,9 +90,9 @@ export default function Ledger() {
                 <tr>
                   <th>Date</th>
                   <th>Item</th>
-                  {!withId && <th>With</th>}
+                  {!withId && <th className="col-with">With</th>}
                   <th className="r">Effect</th>
-                  <th className="r">{runningLabel}</th>
+                  <th className="r col-run">{runningLabel}</th>
                 </tr>
               </thead>
               <tbody>
@@ -106,15 +106,18 @@ export default function Ledger() {
                       {r.kind === 'bill' ? <Link to={`/bills/${r.refId}`}>{r.title}</Link> : <span>{r.title}</span>}
                       <div className="faint">{you ? r.detail : r.detail.replace(/\byou\b/gi, viewer.name).replace(/\bYour\b/, `${viewer.name}'s`)}</div>
                     </td>
-                    {!withId && <td>{r.counterpart.name}</td>}
-                    <td className={`r ${r.effectCents > 0 ? 'owed' : 'owe'}`}>{money(r.effectCents, { signed: true })}</td>
-                    <td className="r">{money(r.runningCents, { signed: true })}</td>
+                    {!withId && <td className="col-with">{r.counterpart.name}</td>}
+                    <td className={`r ${r.effectCents > 0 ? 'owed' : 'owe'}`}>
+                      {money(r.effectCents, { signed: true })}
+                      <div className="faint show-sm run-sm">Balance {money(r.runningCents, { signed: true })}</div>
+                    </td>
+                    <td className="r col-run">{money(r.runningCents, { signed: true })}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={withId ? 3 : 4}>
+                  <td colSpan={2} className="foot-label">
                     {final === 0
                       ? 'All square'
                       : counterpart
@@ -125,7 +128,11 @@ export default function Ledger() {
                           ? `The house owes ${you ? 'you' : viewer.name} ${money(final)}`
                           : `${you ? 'You owe' : `${viewer.name} owes`} the house ${money(final)}`}
                   </td>
+                  {!withId && <td className="col-with" />}
                   <td className={`r ${final > 0 ? 'owed' : final < 0 ? 'owe' : ''}`}>
+                    <span className="show-sm-inline">{money(final, { signed: true })}</span>
+                  </td>
+                  <td className={`r col-run ${final > 0 ? 'owed' : final < 0 ? 'owe' : ''}`}>
                     <span>{money(final, { signed: true })}</span>
                   </td>
                 </tr>

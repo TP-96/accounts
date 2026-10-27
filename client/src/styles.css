@@ -2525,3 +2525,122 @@ table.ledger {
     justify-content: flex-start;
   }
 }
+
+/* ---------- House admins ---------- */
+.role-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--house);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  vertical-align: 2px;
+}
+.member-actions {
+  display: flex;
+  gap: 2px;
+  flex-wrap: nowrap;
+}
+.admin-note {
+  font-size: 0.875rem;
+  margin: 8px 0 0;
+}
+.swatch:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ---------- Phone fixes ---------- */
+.show-sm {
+  display: none;
+}
+/* Form fields never push wider than their column (date and select inputs have a large built-in minimum width). */
+.form-grid > *,
+.row-2 > *,
+.field {
+  min-width: 0;
+}
+.input[type='date'] {
+  min-width: 0;
+  display: block;
+}
+.person-row input[type='checkbox'] {
+  flex: none;
+}
+.person-row label.check > span:last-child {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+.show-sm-inline {
+  display: none;
+}
+@media (max-width: 640px) {
+  .show-sm {
+    display: block;
+  }
+  .show-sm-inline {
+    display: inline;
+  }
+  .ledger .col-with,
+  .ledger .col-run {
+    display: none;
+  }
+  .ledger .run-sm {
+    font-size: 0.8rem;
+    margin-top: 2px;
+    color: var(--ink-3);
+  }
+  .ledger td,
+  .ledger th {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+  /* Long bill names wrap instead of hiding the category tag. */
+  .row-title {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+}
+@media (max-width: 520px) {
+  .person-row {
+    gap: 8px;
+    padding: 10px;
+  }
+  .person-row label.check {
+    gap: 8px;
+  }
+  .person-row .share-input {
+    width: 92px;
+  }
+  .person-row .units-input {
+    width: 112px;
+  }
+  .person-row .share-calc {
+    min-width: 0;
+    font-size: 0.9rem;
+  }
+}
+@media (max-width: 860px) {
+  /* Messages show at the top on phones so they never cover a form's buttons or the tab bar. */
+  .toast-wrap {
+    top: calc(10px + env(safe-area-inset-top));
+    bottom: auto;
+  }
+}
+.section-head > a {
+  padding: 8px 4px;
+  margin: -8px -4px;
+}
+@media (max-width: 520px) {
+  /* The four split choices stay on one line. */
+  .modal .segmented {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-self: stretch !important;
+  }
+  .modal .segmented button {
+    padding: 9px 2px;
+  }
+}

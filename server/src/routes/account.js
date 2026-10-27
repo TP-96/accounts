@@ -105,12 +105,19 @@ r.post('/household/members/:id/remove', requireHousehold, async (req, res) => {
     Number(req.params.id), hid
   );
   if (!target) return res.status(404).json({ error: 'That person is not in your house' });
+  if (target.id !== req.user.id && !(await isAdmin(hid, req.user.id))) return adminOnly(res, 'remove a roommate');
   const owing = (await balancesFor(hid, target.id)).people.filter((p) => p.balanceCents !== 0);
   if (owing.length) {
     const list = owing.map((p) => `${p.user.name} (${p.balanceCents > 0 ? 'owes them' : 'is owed'} $${(Math.abs(p.balanceCents) / 100).toFixed(2)})`).join(', ');
     return res.status(409).json({ error: `${target.id === req.user.id ? 'You need' : `${target.name} needs`} to settle up first: ${list}.` });
   }
-  await q.run('UPDATE household_members SET left_at = now_iso() WHERE user_id = ? AND household_id = ?', target.id, hid);
+  await q.run("UPDATE household_members SET left_at = now_iso(), role = 'member' WHERE user_id = ? AND household_id = ?", target.id, hid);
+  const promoted = await ensureAdmin(hid);
+  if (promoted) {
+    const who = await q.get('SELECT name FROM users WHERE id = ?', promoted);
+    await logActivity(hid, promoted, 'member.admin', `${who.name} is now the house admin`);
+    await notify([promoted], { type: 'member', title: `You're now an admin of this house`, body: `${target.name} left, so you can now manage the house's settings and fix anyone's bills.`, link: '/settings?s=house', householdId: hid });
+  }
   // If that was the house they last used, point them at another one they still belong to (or none).
   await q.run(
     `UPDATE users SET household_id = (SELECT household_id FROM household_members WHERE user_id = ? AND left_at IS NULL ORDER BY joined_at LIMIT 1)
@@ -137,6 +144,22 @@ r.post('/household/members/:id/remove', requireHousehold, async (req, res) => {
   res.json({ ok: true, household: self ? null : await householdPayload(hid) });
 });
 
+/** Is this person an admin of this house? */
+export async function isAdmin(householdId, userId) {
+  return !!(await q.get("SELECT 1 AS ok FROM household_members WHERE household_id = ? AND user_id = ? AND left_at IS NULL AND role = 'admin'", householdId, userId));
+}
+
+/** A house always has an admin: if the last one left, the longest-standing roommate takes over. Returns the new admin, if any. */
+export async function ensureAdmin(householdId) {
+  if (await q.get("SELECT 1 AS ok FROM household_members WHERE household_id = ? AND left_at IS NULL AND role = 'admin'", householdId)) return null;
+  const next = await q.get('SELECT user_id FROM household_members WHERE household_id = ? AND left_at IS NULL ORDER BY joined_at, user_id LIMIT 1', householdId);
+  if (!next) return null;
+  await q.run("UPDATE household_members SET role = 'admin' WHERE household_id = ? AND user_id = ?", householdId, next.user_id);
+  return next.user_id;
+}
+
+const adminOnly = (res, what) => res.status(403).json({ error: `Only a house admin can ${what}. Ask an admin (shown in Settings → House).` });
+
 const newCode = () => crypto.randomBytes(4).toString('hex').toUpperCase();
 
 /** Every house this person belongs to, for the house switcher (with unread alerts per house). */
@@ -156,7 +179,7 @@ async function myHouseholds(userId) {
 async function householdPayload(id) {
   if (!id) return null;
   const h = await q.get('SELECT * FROM households WHERE id = ?', id);
-  const members = await q.all('SELECT id, name, email, color, etransfer FROM active_members WHERE household_id = ? ORDER BY id', id);
+  const members = await q.all('SELECT id, name, email, color, etransfer, role FROM active_members WHERE household_id = ? ORDER BY id', id);
   // People who moved out: kept so old bills and the ledger still show their names.
   const formerMembers = await q.all('SELECT id, name, color FROM former_members WHERE household_id = ? ORDER BY id', id);
   return { id: h.id, name: h.name, color: h.color || COLORS[0], inviteCode: h.invite_code, currency: h.currency, members, formerMembers };
@@ -170,10 +193,11 @@ export async function joinHousehold(user, code) {
   const others = (await q.all('SELECT id FROM active_members WHERE household_id = ?', h.id)).map((m) => m.id);
   await q.run(
     `INSERT INTO household_members (user_id, household_id) VALUES (?, ?)
-     ON CONFLICT (user_id, household_id) DO UPDATE SET left_at = NULL, joined_at = now_iso()`,
+     ON CONFLICT (user_id, household_id) DO UPDATE SET left_at = NULL, joined_at = now_iso(), role = 'member'`,
     user.id, h.id
   );
   await q.run('UPDATE users SET household_id = ? WHERE id = ?', h.id, user.id);
+  await ensureAdmin(h.id); // e.g. rejoining a house everyone else has left
   await logActivity(h.id, user.id, 'member.joined', `${user.name} joined the house`);
   await notify(others, { type: 'member', title: `${user.name} joined ${h.name}`, body: 'You can now split bills with them.', link: '/', householdId: h.id });
   return h;
@@ -186,7 +210,7 @@ r.post('/household', requireUser, async (req, res) => {
   const used = new Set((await myHouseholds(req.user.id)).map((h) => h.color));
   const color = HOUSE_COLORS.find((c) => !used.has(c)) || HOUSE_COLORS[used.size % HOUSE_COLORS.length];
   const h = await q.get('INSERT INTO households (name, invite_code, currency, color) VALUES (?, ?, ?, ?) RETURNING id', name.slice(0, 60), newCode(), currency, color);
-  await q.run('INSERT INTO household_members (user_id, household_id) VALUES (?, ?)', req.user.id, h.id);
+  await q.run("INSERT INTO household_members (user_id, household_id, role) VALUES (?, ?, 'admin')", req.user.id, h.id);
   await q.run('UPDATE users SET household_id = ? WHERE id = ?', h.id, req.user.id);
   await logActivity(h.id, req.user.id, 'household.created', `${req.user.name} created ${name}`);
   res.status(201).json({ household: await householdPayload(h.id) });
@@ -200,11 +224,38 @@ r.post('/household/join', requireUser, async (req, res) => {
 });
 
 r.patch('/household', requireHousehold, async (req, res) => {
+  if (!(await isAdmin(req.user.household_id, req.user.id))) return adminOnly(res, "change the house's name, colour or invite code");
   const name = String(req.body.name || '').trim();
   if (name) await q.run('UPDATE households SET name = ? WHERE id = ?', name.slice(0, 60), req.user.household_id);
   if (HOUSE_COLORS.includes(req.body.color)) await q.run('UPDATE households SET color = ? WHERE id = ?', req.body.color, req.user.household_id);
   if (req.body.regenerateCode) await q.run('UPDATE households SET invite_code = ? WHERE id = ?', newCode(), req.user.household_id);
   res.json({ household: await householdPayload(req.user.household_id) });
+});
+
+/** Admins can make other roommates admins, or step someone back down (a house always keeps at least one). */
+r.post('/household/members/:id/role', requireHousehold, async (req, res) => {
+  const hid = req.user.household_id;
+  if (!(await isAdmin(hid, req.user.id))) return adminOnly(res, 'change who is an admin');
+  const role = req.body.role === 'admin' ? 'admin' : 'member';
+  const target = await q.get('SELECT u.id, u.name, m.role FROM users u JOIN household_members m ON m.user_id = u.id WHERE u.id = ? AND m.household_id = ? AND m.left_at IS NULL', Number(req.params.id), hid);
+  if (!target) return res.status(404).json({ error: 'That person is not in your house' });
+  if (role === 'member' && target.role === 'admin') {
+    const admins = await q.get("SELECT COUNT(*)::int AS n FROM household_members WHERE household_id = ? AND left_at IS NULL AND role = 'admin'", hid);
+    if (admins.n <= 1) return res.status(409).json({ error: 'A house needs at least one admin. Make someone else an admin first.' });
+  }
+  await q.run('UPDATE household_members SET role = ? WHERE household_id = ? AND user_id = ?', role, hid, target.id);
+  if (role !== target.role) {
+    await logActivity(hid, req.user.id, 'member.role', role === 'admin' ? `${req.user.name} made ${target.name} an admin` : `${target.name} is no longer an admin`);
+    if (target.id !== req.user.id)
+      await notify([target.id], {
+        type: 'member',
+        title: role === 'admin' ? `${req.user.name} made you an admin` : `You're no longer an admin`,
+        body: role === 'admin' ? "You can now manage the house's settings, remove roommates and fix anyone's bills." : '',
+        link: '/settings?s=house',
+        householdId: hid,
+      });
+  }
+  res.json({ household: await householdPayload(hid) });
 });
 
 export default r;

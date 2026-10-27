@@ -41,6 +41,8 @@ function client() {
     get: (u) => call('GET', u),
     post: (u, b) => call('POST', u, b || {}),
     patch: (u, b) => call('PATCH', u, b),
+    put: (u, b) => call('PUT', u, b),
+    del: (u) => call('DELETE', u),
     use: (id) => { house = id; },
   };
 }
@@ -156,4 +158,46 @@ test('stats by month: totals, categories, and previous/next month', async () => 
   const overview = (await c.get('/stats?range=12')).data;
   assert.equal(overview.months[0].month, '2026-08');
   assert.ok(h.id);
+});
+
+test('house admins: creator is admin, can fix any bill and remove people; admin passes on when they leave', async () => {
+  const ann = client(), bo = client(), cy = client();
+  const A = await signUp(ann, 'Ann');
+  const house = (await ann.post('/household', { name: 'Admin house' })).data.household;
+  assert.equal(house.members.find((m) => m.id === A.id).role, 'admin', 'whoever creates a house is its admin');
+  const B = await signUp(bo, 'Bo');
+  const C = await signUp(cy, 'Cy');
+  await bo.post('/household/join', { code: house.inviteCode });
+  await cy.post('/household/join', { code: house.inviteCode });
+  const members = (await bo.get('/me')).data.household.members;
+  assert.equal(members.find((m) => m.id === B.id).role, 'member', 'people who join are members');
+
+  // Bo adds a bill. Cy (member) can't touch it; Ann (admin) can.
+  const bill = (await bo.post('/bills', { title: 'Snacks', amount: 30, paidBy: B.id, splitType: 'equal', participants: [{ userId: A.id }, { userId: B.id }, { userId: C.id }] })).data.bill;
+  assert.equal((await cy.del(`/bills/${bill.id}`)).status, 403);
+  const fix = await ann.put(`/bills/${bill.id}`, { title: 'Snacks (fixed)', amount: 36, paidBy: B.id, splitType: 'equal', participants: [{ userId: A.id }, { userId: B.id }, { userId: C.id }] });
+  assert.equal(fix.status, 200, 'admin can edit any bill');
+  assert.equal(fix.data.bill.title, 'Snacks (fixed)');
+
+  // House settings and removing others are admin-only.
+  assert.equal((await cy.patch('/household', { name: 'Cy rules' })).status, 403);
+  assert.equal((await cy.post(`/household/members/${B.id}/remove`)).status, 403, "members can't remove others");
+  assert.equal((await ann.patch('/household', { name: 'Renamed' })).status, 200);
+  assert.equal((await cy.post(`/household/members/${A.id}/role`, { role: 'member' })).status, 403);
+
+  // The only admin can't step down; after making Bo admin, they can.
+  assert.equal((await ann.post(`/household/members/${A.id}/role`, { role: 'member' })).status, 409);
+  const promoted = await ann.post(`/household/members/${B.id}/role`, { role: 'admin' });
+  assert.equal(promoted.data.household.members.find((m) => m.id === B.id).role, 'admin');
+  assert.match((await bo.get('/notifications')).data.notifications[0].title, /made you an admin/);
+  assert.equal((await ann.post(`/household/members/${A.id}/role`, { role: 'member' })).status, 200);
+
+  // Bo (now the only admin) deletes the bill so everyone is square, then moves out: Ann (longest here) takes over.
+  assert.equal((await bo.del(`/bills/${bill.id}`)).status, 200);
+  assert.equal((await bo.post(`/household/members/${B.id}/remove`)).status, 200);
+  const after = (await ann.get('/me')).data.household.members;
+  assert.equal(after.find((m) => m.id === A.id).role, 'admin', 'a house always has an admin');
+  assert.equal(after.length, 2);
+  // Members can still move themselves out.
+  assert.equal((await cy.post(`/household/members/${C.id}/remove`)).status, 200);
 });
